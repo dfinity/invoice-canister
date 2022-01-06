@@ -1,6 +1,9 @@
 // import Ledger    "canister:ledger";
 
 import A "./Account";
+import T "./Types";
+
+import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
 import Hash "mo:base/Hash";
@@ -8,10 +11,11 @@ import HashMap "mo:base/HashMap";
 import ICP "./ICPLedger";
 import Int "mo:base/Int";
 import List "mo:base/List";
+import Nat "mo:base/Int64";
 import Nat64 "mo:base/Nat64";
+import Option "mo:base/Option";
 import Principal "mo:base/Principal";
-import T "./Types";
-import Text "mo:base/List";
+import Text "mo:base/Text";
 import TimeBase "mo:base/Time";
 
 actor Invoice {
@@ -71,7 +75,7 @@ actor Invoice {
     /**
      * Application State
      */
-    var subaccounts : HashMap.HashMap<Principal, AccountIdentifier> = HashMap.fromIter();
+    // var subaccounts : HashMap.HashMap<Principal, AccountIdentifier> = HashMap.fromIter();
 
 
     /**
@@ -94,32 +98,62 @@ actor Invoice {
         // TODO
     };
 
-    public func transfer (args: TransferArgs) {
+    public shared ({caller}) func transfer (args: TransferArgs) : () {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
                 let now = Nat64.fromIntWrap(TimeBase.now());
+                let amount = Nat64.fromNat(args.amount);
+                let destination : ICP.AccountIdentifier = accountIdentifierToBlob(args.destination);
+
                 let icpTransferArgs = {
-                    memo = 0;
-                    amount = args.amount;
-                    created_at_time: ICP.TimeStamp = {
+                    memo : ICP.Memo = 0;
+                    amount: ICP.Tokens = {
+                        e8s = amount;
+                    };
+                    created_at_time: ?ICP.TimeStamp = ?{
                         timestamp_nanos = now;
                     };
-                    fee = 10000;
+                    from_subaccount : ?ICP.SubAccount = ?getICPSubaccount({caller});
+                    to : ICP.AccountIdentifier = destination;
+                    fee : ICP.Tokens = {
+                        e8s = 10000;
+                    };
                 };
-                ICP.transfer(icpTransferArgs);
-                Debug.print("icp");
+                let foo = await ICP.transfer(icpTransferArgs);
             };
             case(_){
-                Debug.print("oops");
+                let bar = Debug.print("oops");
             };
         };
-        // TODO
+        ();
+        // TODO - future tokens
     };
 
     public func validate_payment () {
         // TODO
     };
 
+
+    func accountIdentifierToBlob (identifier: AccountIdentifier) : Blob {
+        switch identifier {
+            case(#text(identifier)){
+                return Text.encodeUtf8(identifier);
+            };
+            case(#principal(identifier)){
+                return Principal.toBlob(identifier);
+            };
+            case(#blob(identifier)){
+                return identifier;
+            };
+        };
+    };
+
+    type icpSubaccountArgs = {
+        caller: Principal;
+    };
+    func getICPSubaccount (args: icpSubaccountArgs) : ICP.SubAccount {
+        ICP.getICPSubaccount(args);
+    };
 
 }

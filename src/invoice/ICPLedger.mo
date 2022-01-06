@@ -1,9 +1,10 @@
-// import Ledger "canister:ledger"
+import Ledger "canister:ledger";
+import A "./Account";
 
 module {
-    type Memo = Nat64;
+    public type Memo = Nat64;
 
-    type Tokens = {
+    public type Tokens = {
         e8s : Nat64;
     };
 
@@ -11,13 +12,13 @@ module {
         timestamp_nanos: Nat64;
     };
 
-    type AccountIdentifier = Blob;
+    public type AccountIdentifier = Blob;
     
-    type SubAccount = Blob;
+    public type SubAccount = Blob;
 
-    type BlockIndex = Nat64;
+    public type BlockIndex = Nat64;
 
-    type TransferError = {
+    public type TransferError = {
         #BadFee: {
             expected_fee: Tokens;
         };
@@ -47,7 +48,22 @@ module {
         #Err: TransferError;
     };
 
-    public func transfer (args: TransferArgs) : TransferResult {
+    public func transfer (args: TransferArgs) : async TransferResult {
         #Ok(1);
+    };
+
+    type AccountArgs = {
+        caller : Principal;
+    };
+    // Returns current balance on the default account of this canister.
+    public func canisterBalance(args: AccountArgs) : async Ledger.Token {
+        let defaultAccount =  {
+            account = A.accountIdentifier(args.caller, A.defaultSubaccount());
+        };
+        await Ledger.account_balance(defaultAccount);
+    };
+
+    public func getICPSubaccount(args: AccountArgs) : Blob {
+        A.accountIdentifier(args.caller, A.defaultSubaccount());
     };
 }
