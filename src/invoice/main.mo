@@ -47,22 +47,38 @@ actor Invoice {
         refundAccount: ?AccountIdentifier;
     };
 
+    // Get Balance
+    type getBalanceArgs = {
+	    token: Token;
+    };
+    type GetBalanceResult = {
+        #Ok: GetBalanceSuccess;
+        #Err: GetBalanceErr;
+    };
+    type GetBalanceSuccess = {
+        balance: Nat;
+    };
+    type GetBalanceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken
+        };
+    };
+
+    // Transfer
     type TransferArgs = {
         amount: Nat;
         token: Token;
         destination: AccountIdentifier;
         source: ?AccountIdentifier;
     };
-
     type TransferResult = {
         #Ok: TransferSuccess;
         #Err: TransferError;
     };
-
     type TransferSuccess = {
         blockHeight: Nat;
     };
-
     type TransferError = {
         #InsufficientFunds: {
             balance: Nat;
@@ -94,8 +110,21 @@ actor Invoice {
         // TODO
     };
 
-    public func get_balance () {
-        // TODO
+    public shared ({caller}) func get_balance (args: getBalanceArgs) : async GetBalanceResult {
+        let token = args.token;
+        switch(token.symbol){
+            case("ICP"){
+                #Ok({
+                    balance = await ICP.canisterBalance({caller})
+                });
+            };
+            case(_){
+                #Err({
+                    message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+                    kind = #InvalidToken;
+                });
+            };
+        };
     };
 
     public shared ({caller}) func transfer (args: TransferArgs) : () {

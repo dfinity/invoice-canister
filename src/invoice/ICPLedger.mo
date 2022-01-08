@@ -1,5 +1,6 @@
 import Ledger "canister:ledger";
 import A "./Account";
+import Nat64 "mo:base/Nat64";
 
 module {
     public type Memo = Nat64;
@@ -56,11 +57,12 @@ module {
         caller : Principal;
     };
     // Returns current balance on the default account of this canister.
-    public func canisterBalance(args: AccountArgs) : async Ledger.Token {
+    public func canisterBalance(args: AccountArgs) : async Nat {
         let defaultAccount =  {
             account = A.accountIdentifier(args.caller, A.defaultSubaccount());
         };
-        await Ledger.account_balance(defaultAccount);
+        let balance = await Ledger.account_balance(defaultAccount);
+        return Nat64.toNat(balance.e8s);
     };
 
     public func getICPSubaccount(args: AccountArgs) : Blob {
