@@ -48,7 +48,7 @@ actor Invoice {
     };
 
     // Get Balance
-    type getBalanceArgs = {
+    type GetBalanceArgs = {
 	    token: Token;
     };
     type GetBalanceResult = {
@@ -59,6 +59,24 @@ actor Invoice {
         balance: Nat;
     };
     type GetBalanceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken
+        };
+    };
+
+    // Get DefaultAccount
+    type GetAccountArgs = {
+	    token: Token;
+    };
+    type GetAccountResult = {
+        #Ok: GetAccountSuccess;
+        #Err: GetAccountErr;
+    };
+    type GetAccountSuccess = {
+        account: ?Text;
+    };
+    type GetAccountErr = {
         message: ?Text; 
         kind: {
             #InvalidToken
@@ -110,12 +128,29 @@ actor Invoice {
         // TODO
     };
 
-    public shared ({caller}) func get_balance (args: getBalanceArgs) : async GetBalanceResult {
+    public shared ({caller}) func get_balance (args: GetBalanceArgs) : async GetBalanceResult {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
                 #Ok({
                     balance = await ICP.canisterBalance({caller})
+                });
+            };
+            case(_){
+                #Err({
+                    message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+                    kind = #InvalidToken;
+                });
+            };
+        };
+    };
+
+    public shared ({caller}) func get_default_account (args: GetAccountArgs) : async GetAccountResult {
+        let token = args.token;
+        switch(token.symbol){
+            case("ICP"){
+                #Ok({
+                    account = Text.decodeUtf8(ICP.getICPSubaccount({caller}))
                 });
             };
             case(_){
@@ -157,10 +192,6 @@ actor Invoice {
         };
         ();
         // TODO - future tokens
-    };
-
-    public func validate_payment () {
-        // TODO
     };
 
 
