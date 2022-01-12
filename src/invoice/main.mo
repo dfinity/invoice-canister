@@ -1,8 +1,11 @@
-// import Ledger    "canister:ledger";
-
 import A "./Account";
 import T "./Types";
+import CRC32     "./CRC32";
+import SHA256 "./SHA256";
+import SHA224    "./SHA224";
+import Prim "mo:⛔";
 
+import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
@@ -12,13 +15,17 @@ import ICP "./ICPLedger";
 import Int "mo:base/Int";
 import List "mo:base/List";
 import Nat "mo:base/Int64";
+import Nat8 "mo:base/Nat8";
 import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Text "mo:base/Text";
 import TimeBase "mo:base/Time";
+import Cycles "mo:base/ExperimentalCycles";
 
 actor Invoice {
+    let DOMAIN_SEPARATOR = "invoice";
+    let DOMAIN_SEPARATOR2 = Text.concat("invoice_subaccount", "18");
 
     type Details = T.Details;
     type Token = T.Token;
@@ -26,9 +33,9 @@ actor Invoice {
     type Time = TimeBase.Time;
     
     type Invoice = {
-        id: Hash.Hash;
+        id: Blob;
         creator: Principal;
-        details: Details;
+        details: ?Details;
         amount: Nat;
         token: Token;
         verifiedAtTime: ?Time;
@@ -36,14 +43,6 @@ actor Invoice {
         refunded: Bool;
         expiration: Time;
         destination: AccountIdentifier;
-        refundAccount: ?AccountIdentifier;
-    };
-    
-    type InvoiceCreateArgs = {
-        amount: Nat;
-        token: Token;
-        destination: ?AccountIdentifier;
-        details: Details;
         refundAccount: ?AccountIdentifier;
     };
 
@@ -83,6 +82,31 @@ actor Invoice {
         };
     };
 
+    // Create Invoice
+    type CreateInvoiceArgs = {
+        amount: Nat;
+        token: Token;
+        details: ?Details;
+        refundAccount: ?AccountIdentifier;
+    };
+    type CreateInvoiceResult = {
+        #Ok: CreateInvoiceSuccess;
+        #Err: CreateInvoiceErr;
+    };
+    type CreateInvoiceSuccess = {
+        invoice: Invoice;
+    };
+    type CreateInvoiceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken;
+            #InvalidAmount;
+            #InvalidDestination;
+            #InvalidDetails;
+            #InvalidRefundAccount;
+        };
+    };
+
     // Transfer
     type TransferArgs = {
         amount: Nat;
@@ -110,14 +134,55 @@ actor Invoice {
      * Application State
      */
     // var subaccounts : HashMap.HashMap<Principal, AccountIdentifier> = HashMap.fromIter();
+    stable var invoiceCounter : Nat = 0;
 
 
     /**
      * Application Interface
      */    
+    type Resp = {
+        principal: Principal;
+    };
+    public shared ({caller}) func create_invoice (args: CreateInvoiceArgs) : async Principal {
+        let idHash = SHA224.Digest();
+        idHash.write([0x0A]);
+        idHash.write(Blob.toArray(Text.encodeUtf8("invoice-id")));
+        idHash.write([Nat8.fromNat(invoiceCounter)]);
+        
+        invoiceCounter += 1;
+        
+        idHash.write(Blob.toArray(Principal.toBlob(caller)));
+        let hashSum = idHash.sum();
+        let crc32Bytes = A.beBytes(CRC32.ofArray(hashSum));
+        let blob = Blob.fromArray(Array.append(crc32Bytes, hashSum));
 
-    public func create_invoice () {
-        // TODO
+        Prim.principalOfBlob(blob);
+
+        /* format of Invoice ID:
+            byte for length of DS - domain separater - nonce - caller - details
+        */ 
+        // per-invoice subaccount generated from invoice id
+
+        
+        // default (final destination) subaccount for caller, controlled by current canister
+        // Subaccount option - domain separator + principal of caller
+
+
+
+        // let invoice : Invoice = {
+        //     id;
+        //     creator = caller;
+        //     details = args.details;
+        //     amount = args.amount;
+        //     token = args.token;
+        //     verifiedAtTime = null;
+        //     paid = false;
+        //     refunded = false;
+        //     // 1 week in nanoseconds
+        //     expiration = TimeBase.now() + (1000 * 60 * 60 * 24 * 7);
+        //     destination = destination;
+        //     refundAccount = args.refundAccount;
+        // };
     };
 
     public func refund_invoice () {
@@ -215,5 +280,11 @@ actor Invoice {
     func getICPSubaccount (args: icpSubaccountArgs) : ICP.SubAccount {
         ICP.getICPSubaccount(args);
     };
+    type hashIdArgs = {
+        caller: Principal;
+    };
 
+    public query func remaining_cycles() : async Nat {
+        return Cycles.balance()
+    };
 }

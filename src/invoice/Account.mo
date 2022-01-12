@@ -13,7 +13,7 @@ module {
   // 32-byte array.
   public type Subaccount = Blob;
 
-  func beBytes(n: Nat32) : [Nat8] {
+  public func beBytes(n: Nat32) : [Nat8] {
     func byte(n: Nat32) : Nat8 {
       Nat8.fromNat(Nat32.toNat(n & 0xff))
     };
