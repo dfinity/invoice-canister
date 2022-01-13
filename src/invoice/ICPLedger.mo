@@ -65,7 +65,15 @@ module {
         return Nat64.toNat(balance.e8s);
     };
 
-    public func getICPSubaccount(args: AccountArgs) : Blob {
+    public func getDefaultSubaccount(args: AccountArgs) : Blob {
         A.accountIdentifier(args.caller, A.defaultSubaccount());
+    };
+
+    public type SubAccountArgs = {
+        principal : Principal;
+        subaccount : SubAccount;
+    };
+    public func getICPSubaccount(args: SubAccountArgs) : Blob {
+        A.accountIdentifier(args.principal, args.subaccount);
     };
 }
