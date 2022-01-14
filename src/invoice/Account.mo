@@ -1,5 +1,6 @@
 import Array     "mo:base/Array";
 import Blob      "mo:base/Blob";
+import Buffer    "mo:base/Buffer";
 import Nat8      "mo:base/Nat8";
 import Nat32     "mo:base/Nat32";
 import Principal "mo:base/Principal";
@@ -32,6 +33,7 @@ module {
     hash.write(Blob.toArray(subaccount));
     let hashSum = hash.sum();
     let crc32Bytes = beBytes(CRC32.ofArray(hashSum));
+    let buf = Buffer.Buffer<Nat8>(32);
     Blob.fromArray(Array.append(crc32Bytes, hashSum))
   };
 

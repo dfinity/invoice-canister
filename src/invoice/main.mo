@@ -14,6 +14,7 @@ import Hash "mo:base/Hash";
 import HashMap "mo:base/HashMap";
 import ICP "./ICPLedger";
 import Int "mo:base/Int";
+import Iter "mo:base/Iter";
 import List "mo:base/List";
 import Nat "mo:base/Int64";
 import Nat8 "mo:base/Nat8";
@@ -61,7 +62,8 @@ actor Invoice {
     type GetBalanceErr = {
         message: ?Text; 
         kind: {
-            #InvalidToken
+            #InvalidToken;
+            #NotFound;
         };
     };
 
@@ -136,7 +138,8 @@ actor Invoice {
      */
     // var subaccounts : HashMap.HashMap<Principal, AccountIdentifier> = HashMap.fromIter();
     stable var invoiceCounter : Nat = 0;
-
+    stable var entries : [Invoice] = [];
+    let invoices: HashMap.HashMap<Principal, Invoice> = HashMap.HashMap(16, Principal.equal, Principal.hash);
 
     /**
      * Application Interface
@@ -170,6 +173,8 @@ actor Invoice {
                     destination = destination;
                     refundAccount = args.refundAccount;
                 };
+                
+                invoices.put(id, invoice);
 
                 #Ok({invoice});
             };
@@ -250,8 +255,36 @@ actor Invoice {
         // TODO
     };
 
-    public func get_invoice () {
-        // TODO
+    type GetInvoiceArgs = {
+        id: Principal;
+    };
+    type GetInvoiceResult = {
+        #Ok: GetInvoiceSuccess;
+        #Err: GetInvoiceErr;
+    };
+    type GetInvoiceSuccess = {
+        invoice: Invoice;
+    };
+    type GetInvoiceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidInvoiceId;
+            #NotFound;
+        };
+    };
+    public func get_invoice (args: GetInvoiceArgs) : async GetInvoiceResult {
+        let invoice = invoices.get(args.id);
+        switch(invoice){
+            case(null){
+                return #Err({
+                    message = ?"Invoice not found";
+                    kind = #NotFound;
+                });
+            };
+            case(? i){
+                return #Ok({invoice = i});
+            };
+        };
     };
 
     public shared ({caller}) func get_balance (args: GetBalanceArgs) : async GetBalanceResult {
@@ -325,5 +358,13 @@ actor Invoice {
 
     public query func remaining_cycles() : async Nat {
         return Cycles.balance()
+    };
+
+    system func preupgrade() {
+        entries := Iter.toArray(invoices.vals());
+    };
+
+    system func postupgrade() {
+        entries := [];
     };
 }
