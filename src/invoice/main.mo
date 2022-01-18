@@ -4,6 +4,7 @@ import Hex "./Hex";
 import CRC32     "./CRC32";
 import SHA256 "./SHA256";
 import SHA224    "./SHA224";
+import SelfMeta "./SelfMeta";
 import Prim "mo:⛔";
 
 import Array "mo:base/Array";
@@ -33,7 +34,7 @@ actor Invoice {
     type Time = TimeBase.Time;
     
     type Invoice = {
-        id: Principal;
+        id: Nat;
         creator: Principal;
         details: ?Details;
         amount: Nat;
@@ -55,8 +56,8 @@ actor Invoice {
 // #region State
 
     stable var invoiceCounter : Nat = 0;
-    stable var entries : [(Principal, Invoice)] = [];
-    var invoices: HashMap.HashMap<Principal, Invoice> = HashMap.HashMap(16, Principal.equal, Principal.hash);
+    stable var entries : [(Nat, Invoice)] = [];
+    var invoices: HashMap.HashMap<Nat, Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
 // #endregion
 
 /**
@@ -88,9 +89,15 @@ actor Invoice {
         };
     };
     public shared ({caller}) func create_invoice (args: CreateInvoiceArgs) : async CreateInvoiceResult {
-        let id : Principal = generateInvoiceId({caller});
+        let id : Nat = invoiceCounter;
+        // increment counter
+        invoiceCounter += 1;
 
-        let destinationResult : GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({ token=args.token; invoiceId=id; caller });
+        let destinationResult : GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({ 
+            token=args.token;
+            invoiceId=id;
+            caller 
+        });
 
         switch(destinationResult){
             case (#Err result) {
@@ -114,7 +121,7 @@ actor Invoice {
                     refunded = false;
                     // 1 week in nanoseconds
                     expiration = TimeBase.now() + (1000 * 60 * 60 * 24 * 7);
-                    destination = destination;
+                    destination;
                     refundAccount = args.refundAccount;
                 };
                 
@@ -126,35 +133,32 @@ actor Invoice {
     };
     type GenerateInvoiceIdArgs = {
         caller: Principal;
+        id: Nat;
     };
 
     // Generate an invoice ID using hashed values from the invoice arguments
-    func generateInvoiceId (args: GenerateInvoiceIdArgs) : Principal {
+    func generateInvoiceId (args: GenerateInvoiceIdArgs) : Blob {
         let idHash = SHA224.Digest();
         // Length of domain separator
         idHash.write([0x0A]);
         // Domain separator
         idHash.write(Blob.toArray(Text.encodeUtf8("invoice-id")));
         // Counter as Nonce
-        idHash.write([Nat8.fromNat(invoiceCounter)]);
+        idHash.write([Nat8.fromNat(args.id)]);
         // Principal of caller
         idHash.write(Blob.toArray(Principal.toBlob(args.caller)));
-        
-        // increment counter
-        invoiceCounter += 1;
 
         let hashSum = idHash.sum();
         let blob = Blob.fromArray(hashSum);
 
-        // TODO - replace with Principal.fromBlob once available
-        return Prim.principalOfBlob(blob);
+        return blob;
     };
 
     // #region Get Destination Account Identifier
     type GetDestinationAccountIdentifierArgs = {
         token : Token;
         caller : Principal;
-        invoiceId : Principal;
+        invoiceId : Nat;
     };
     type GetDestinationAccountIdentifierResult = {
         #Ok: GetDestinationAccountIdentifierSuccess;
@@ -175,9 +179,14 @@ actor Invoice {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
+                let meta : SelfMeta.Meta = SelfMeta.getMeta();
+                let canisterId = meta.canisterId;
+
+                let subaccount: ICP.SubAccount = generateInvoiceId({ caller = args.caller; id = args.invoiceId });
+
                 let accountArgs: ICP.SubAccountArgs = {
-                    principal=args.caller;
-                    subaccount=Principal.toBlob(args.invoiceId);
+                    principal = canisterId;
+                    subaccount = subaccount;
                 };
                 let account = ICP.getICPSubaccount(accountArgs);
                 let hexEncoded = Hex.encode(
@@ -199,7 +208,7 @@ actor Invoice {
 
 // #region Get Invoice
     type GetInvoiceArgs = {
-        id: Principal;
+        id: Nat;
     };
     type GetInvoiceResult = {
         #Ok: GetInvoiceSuccess;
@@ -270,7 +279,7 @@ actor Invoice {
 
 // #region Verify Invoice
     type VerifyInvoiceArgs = {
-        id: Principal;
+        id: Nat;
     };
     type VerifyInvoiceResult = {
         #Ok: VerifyInvoiceSuccess;
@@ -401,13 +410,13 @@ actor Invoice {
         };
     };
 
-    public shared ({caller}) func transfer (args: TransferArgs) : () {
+    public shared ({caller}) func transfer (args: TransferArgs) : async () {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
                 let now = Nat64.fromIntWrap(TimeBase.now());
                 let amount = Nat64.fromNat(args.amount);
-                let destination : ICP.AccountIdentifier = accountIdentifierToBlob(args.destination);
+                let destination : ICP.AccountIdentifier =  await accountIdentifierToBlob(args.destination);
 
                 let icpTransferArgs = {
                     memo : ICP.Memo = 0;
@@ -477,7 +486,7 @@ actor Invoice {
 // #endregion
 
 // #region Utils
-    func accountIdentifierToBlob (identifier: AccountIdentifier) : Blob {
+    public func accountIdentifierToBlob (identifier: AccountIdentifier) : async Blob {
         switch identifier {
             case(#text(identifier)){
                 switch (Hex.decode(identifier)) {
@@ -523,7 +532,7 @@ actor Invoice {
     };
 
     system func postupgrade() {
-        invoices := HashMap.fromIter(Iter.fromArray(entries), 16, Principal.equal, Principal.hash);
+        invoices := HashMap.fromIter(Iter.fromArray(entries), 16, Nat.equal, Hash.hash);
         entries := [];
     };
 // #endregion

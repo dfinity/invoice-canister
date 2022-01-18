@@ -20,3 +20,8 @@ To create an invoice, run something along the lines of
 dfx canister call invoice create_invoice '(record { token = record { symbol="ICP" }; amount = 10 })'
 ```
 
+Get Invoice
+
+```
+dfx canister call invoice get_invoice '(record { id = 1 })'
+```

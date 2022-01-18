@@ -1,7 +1,9 @@
 import Ledger "canister:ledger";
 import A "./Account";
+import SelfMeta "./SelfMeta";
 import Hex "./Hex";
 import Nat64 "mo:base/Nat64";
+import Principal "mo:base/Principal";
 import Blob "mo:base/Blob";
 
 module {
@@ -60,6 +62,7 @@ module {
         account : Text;
     };
     public func balance(args: AccountArgs) : async Nat {
+        let meta : SelfMeta.Meta = SelfMeta.getMeta();
         switch (Hex.decode(args.account)){
             case (#err err){
                 let balance : Nat = 0;
@@ -77,7 +80,9 @@ module {
         caller : Principal;
     };
     public func getDefaultSubaccount(args: DefaultSubaccountArgs) : Blob {
-        A.accountIdentifier(args.caller, A.defaultSubaccount());
+        let meta : SelfMeta.Meta = SelfMeta.getMeta();
+        let canisterId = meta.canisterId;
+        A.accountIdentifier(canisterId, Principal.toBlob(args.caller));
     };
 
     public type SubAccountArgs = {
