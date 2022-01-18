@@ -5,31 +5,33 @@ import CRC32     "./CRC32";
 import SHA256 "./SHA256";
 import SHA224    "./SHA224";
 import SelfMeta "./SelfMeta";
+import ICP "./ICPLedger";
 import Prim "mo:⛔";
 
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
+import Cycles "mo:base/ExperimentalCycles";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
+import Float "mo:base/Float";
 import Hash "mo:base/Hash";
 import HashMap "mo:base/HashMap";
-import ICP "./ICPLedger";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import List "mo:base/List";
 import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
 import Nat64 "mo:base/Nat64";
+import Nat8 "mo:base/Nat8";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Text "mo:base/Text";
 import TimeBase "mo:base/Time";
-import Cycles "mo:base/ExperimentalCycles";
 
 actor Invoice {
 // #region Types
     type Details = T.Details;
     type Token = T.Token;
+    type TokenVerbose = T.TokenVerbose;
     type AccountIdentifier = T.AccountIdentifier;
     type Time = TimeBase.Time;
     
@@ -39,7 +41,7 @@ actor Invoice {
         details: ?Details;
         amount: Nat;
         amountPaid: Nat;
-        token: Token;
+        token: TokenVerbose;
         verifiedAtTime: ?Time;
         paid: Bool;
         refunded: Bool;
@@ -108,6 +110,7 @@ actor Invoice {
             };
             case (#Ok result) {
                 let destination : AccountIdentifier = result.accountIdentifier;
+                let token = getTokenVerbose(args.token);
 
                 let invoice : Invoice = {
                     id;
@@ -115,7 +118,7 @@ actor Invoice {
                     details = args.details;
                     amount = args.amount;
                     amountPaid = 0;
-                    token = args.token;
+                    token;
                     verifiedAtTime = null;
                     paid = false;
                     refunded = false;
@@ -134,6 +137,30 @@ actor Invoice {
     type GenerateInvoiceIdArgs = {
         caller: Principal;
         id: Nat;
+    };
+
+    func getTokenVerbose(token: Token) : TokenVerbose { 
+        switch(token.symbol){
+            case ("ICP") {
+                return {
+                    symbol = "ICP";
+                    decimals = 8;
+                    meta = ?{
+                        Issuer = "e8s";
+                    }
+                };
+
+            };
+            case (_) {
+                return {
+                    symbol = "";
+                    decimals = 1;
+                    meta = ?{
+                        Issuer = "";
+                    }
+                }
+            };
+        };
     };
 
     // Generate an invoice ID using hashed values from the invoice arguments
@@ -374,6 +401,19 @@ actor Invoice {
                 invoices.put(args.id, verifiedInvoice);
 
                 // TODO Transfer funds to default subaccount of invoice creator
+                let transferResult = await ICP.transfer({
+                    memo = 0;
+                    fee = {
+                        e8s = 10000;
+                    };
+                    amount = {
+                        e8s = Nat64.fromNat(i.amount);
+                    };
+                    account = i.destination;
+                    from_subaccount = ?ICP.getDefaultSubaccount({caller});
+                    to = ICP.getDefaultSubaccount({caller});
+                    created_at_time = null;
+                });
 
                 return #Ok(#Paid{invoice = verifiedInvoice});
             };
@@ -389,7 +429,7 @@ actor Invoice {
 
 // #region Transfer
     type TransferArgs = {
-        amount: Nat;
+        amount: Float;
         token: Token;
         destination: AccountIdentifier;
         source: ?AccountIdentifier;
@@ -415,13 +455,13 @@ actor Invoice {
         switch(token.symbol){
             case("ICP"){
                 let now = Nat64.fromIntWrap(TimeBase.now());
-                let amount = Nat64.fromNat(args.amount);
                 let destination : ICP.AccountIdentifier =  await accountIdentifierToBlob(args.destination);
 
                 let icpTransferArgs = {
                     memo : ICP.Memo = 0;
                     amount: ICP.Tokens = {
-                        e8s = amount;
+                        // e8s are 10^-8 of a token
+                        e8s = Nat64.fromIntWrap(Float.toInt(args.amount * 100000000));
                     };
                     created_at_time: ?ICP.TimeStamp = ?{
                         timestamp_nanos = now;

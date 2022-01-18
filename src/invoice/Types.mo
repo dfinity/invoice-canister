@@ -2,6 +2,13 @@ module {
     public type Token = {
         symbol: Text;
     };
+    public type TokenVerbose = {
+        symbol: Text;
+        decimals: Int;
+        meta: ?{
+            Issuer: Text;
+        };
+    };
     public type AccountIdentifier = {
         #text: Text;
         #principal: Principal;

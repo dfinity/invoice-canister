@@ -17,7 +17,7 @@ You can then interact with the canister with `dfx canister call invoice ...`, or
 To create an invoice, run something along the lines of 
 
 ```
-dfx canister call invoice create_invoice '(record { token = record { symbol="ICP" }; amount = 10 })'
+dfx canister call invoice create_invoice '(record { token = record { symbol="ICP" }; amount = 10_000_000_000 })'
 ```
 
 Get Invoice

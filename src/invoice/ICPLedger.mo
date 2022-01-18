@@ -54,7 +54,15 @@ module {
     };
 
     public func transfer (args: TransferArgs) : async TransferResult {
-        #Ok(1);
+        let result = await Ledger.transfer({
+            memo = args.memo;
+            amount = args.amount;
+            fee = args.fee;
+            from_subaccount = args.from_subaccount;
+            to = args.to;
+            created_at_time = args.created_at_time;
+        });
+        return result;
     };
 
     type AccountArgs = {
