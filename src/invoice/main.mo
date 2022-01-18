@@ -16,7 +16,7 @@ import ICP "./ICPLedger";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import List "mo:base/List";
-import Nat "mo:base/Int64";
+import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
 import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
@@ -26,9 +26,7 @@ import TimeBase "mo:base/Time";
 import Cycles "mo:base/ExperimentalCycles";
 
 actor Invoice {
-    let DOMAIN_SEPARATOR = "invoice";
-    let DOMAIN_SEPARATOR2 = Text.concat("invoice_subaccount", "18");
-
+// #region Types
     type Details = T.Details;
     type Token = T.Token;
     type AccountIdentifier = T.AccountIdentifier;
@@ -39,6 +37,7 @@ actor Invoice {
         creator: Principal;
         details: ?Details;
         amount: Nat;
+        amountPaid: Nat;
         token: Token;
         verifiedAtTime: ?Time;
         paid: Bool;
@@ -47,45 +46,24 @@ actor Invoice {
         destination: AccountIdentifier;
         refundAccount: ?AccountIdentifier;
     };
+// #endregion
 
-    // Get Balance
-    type GetBalanceArgs = {
-	    token: Token;
-    };
-    type GetBalanceResult = {
-        #Ok: GetBalanceSuccess;
-        #Err: GetBalanceErr;
-    };
-    type GetBalanceSuccess = {
-        balance: Nat;
-    };
-    type GetBalanceErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidToken;
-            #NotFound;
-        };
-    };
+/**
+* Application State
+*/
 
-    // Get DefaultAccount
-    type GetAccountArgs = {
-	    token: Token;
-    };
-    type GetAccountResult = {
-        #Ok: GetAccountSuccess;
-        #Err: GetAccountErr;
-    };
-    type GetAccountSuccess = {
-        account: ?Text;
-    };
-    type GetAccountErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidToken
-        };
-    };
+// #region State
 
-    // Create Invoice
+    stable var invoiceCounter : Nat = 0;
+    stable var entries : [(Principal, Invoice)] = [];
+    var invoices: HashMap.HashMap<Principal, Invoice> = HashMap.HashMap(16, Principal.equal, Principal.hash);
+// #endregion
+
+/**
+* Application Interface
+*/    
+
+// #region Create Invoice
     type CreateInvoiceArgs = {
         amount: Nat;
         token: Token;
@@ -109,41 +87,6 @@ actor Invoice {
             #InvalidRefundAccount;
         };
     };
-
-    // Transfer
-    type TransferArgs = {
-        amount: Nat;
-        token: Token;
-        destination: AccountIdentifier;
-        source: ?AccountIdentifier;
-    };
-    type TransferResult = {
-        #Ok: TransferSuccess;
-        #Err: TransferError;
-    };
-    type TransferSuccess = {
-        blockHeight: Nat;
-    };
-    type TransferError = {
-        #InsufficientFunds: {
-            balance: Nat;
-        };
-        #GenericException: {
-            message: Text;
-        };
-    };
-
-    /**
-     * Application State
-     */
-    // var subaccounts : HashMap.HashMap<Principal, AccountIdentifier> = HashMap.fromIter();
-    stable var invoiceCounter : Nat = 0;
-    stable var entries : [Invoice] = [];
-    let invoices: HashMap.HashMap<Principal, Invoice> = HashMap.HashMap(16, Principal.equal, Principal.hash);
-
-    /**
-     * Application Interface
-     */    
     public shared ({caller}) func create_invoice (args: CreateInvoiceArgs) : async CreateInvoiceResult {
         let id : Principal = generateInvoiceId({caller});
 
@@ -164,6 +107,7 @@ actor Invoice {
                     creator = caller;
                     details = args.details;
                     amount = args.amount;
+                    amountPaid = 0;
                     token = args.token;
                     verifiedAtTime = null;
                     paid = false;
@@ -180,7 +124,6 @@ actor Invoice {
             };
         };
     };
-
     type GenerateInvoiceIdArgs = {
         caller: Principal;
     };
@@ -207,6 +150,7 @@ actor Invoice {
         return Prim.principalOfBlob(blob);
     };
 
+    // #region Get Destination Account Identifier
     type GetDestinationAccountIdentifierArgs = {
         token : Token;
         caller : Principal;
@@ -250,11 +194,10 @@ actor Invoice {
             };
         };
     };
+// #endregion
+// #endregion
 
-    public func refund_invoice () {
-        // TODO
-    };
-
+// #region Get Invoice
     type GetInvoiceArgs = {
         id: Principal;
     };
@@ -286,13 +229,33 @@ actor Invoice {
             };
         };
     };
+// #endregion
 
+// #region Get Balance
+    type GetBalanceArgs = {
+	    token: Token;
+    };
+    type GetBalanceResult = {
+        #Ok: GetBalanceSuccess;
+        #Err: GetBalanceErr;
+    };
+    type GetBalanceSuccess = {
+        balance: Nat;
+    };
+    type GetBalanceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken;
+            #NotFound;
+        };
+    };
     public shared ({caller}) func get_balance (args: GetBalanceArgs) : async GetBalanceResult {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
+                let defaultSubaccount = Hex.encode(Blob.toArray(ICP.getDefaultSubaccount({caller})));
                 #Ok({
-                    balance = await ICP.canisterBalance({caller})
+                    balance = await ICP.balance({account = defaultSubaccount})
                 });
             };
             case(_){
@@ -301,6 +264,140 @@ actor Invoice {
                     kind = #InvalidToken;
                 });
             };
+        };
+    };
+// #endregion
+
+// #region Verify Invoice
+    type VerifyInvoiceArgs = {
+        id: Principal;
+    };
+    type VerifyInvoiceResult = {
+        #Ok: VerifyInvoiceSuccess;
+        #Err: VerifyInvoiceErr;
+    };
+    type VerifyInvoiceSuccess = {
+        #Paid: {
+            invoice: Invoice;
+        };
+        #AlreadyVerified: {
+            invoice: Invoice;
+        };
+    };
+    type VerifyInvoiceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidInvoiceId;
+            #NotFound;
+            #NotYetPaid;
+            #Expired;
+        };
+    };
+    public shared ({caller}) func verify_invoice (args: VerifyInvoiceArgs) : async VerifyInvoiceResult {
+        let invoice = invoices.get(args.id);
+
+        switch(invoice){
+            case(null){
+                return #Err({
+                    message = ?"Invoice not found";
+                    kind = #NotFound;
+                });
+            };
+            case(? i){
+                // Return if already verified
+                if (i.verifiedAtTime != null){
+                    return #Ok(#AlreadyVerified{
+                        invoice = i;
+                    });
+                };
+
+                // TODO - implement for multiple tokens
+                let destination = accountIdentifierToText(i.destination);
+                let balance = await ICP.balance({account = destination});
+
+                // If balance is less than invoice amount, return error
+                if(balance < i.amount){
+
+                    if(balance != i.amountPaid){
+                        let updatedInvoice = {
+                            id = i.id;
+                            creator = caller;
+                            details = i.details;
+                            amount = i.amount;
+                            // Update invoice with latest balance
+                            amountPaid = balance;
+                            token = i.token;
+                            verifiedAtTime = i.verifiedAtTime;
+                            paid = false;
+                            refunded = false;
+                            expiration = i.expiration;
+                            destination = i.destination;
+                            refundAccount = i.refundAccount;
+                        };
+                        let replaced = invoices.replace(i.id, updatedInvoice);
+                    };
+
+                    return #Err({
+                        message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
+                        kind = #NotYetPaid;
+                    });
+                };
+
+                let verifiedAtTime: ?Time = ?TimeBase.now();
+                // Otherwise, update with latest balance and mark as paid
+                let verifiedInvoice = {
+                    id = i.id;
+                    creator = caller;
+                    details = i.details;
+                    amount = i.amount;
+                    // update amountPaid
+                    amountPaid = balance;
+                    token = i.token;
+                    // update verifiedAtTime
+                    verifiedAtTime;
+                    // update paid
+                    paid = true;
+                    refunded = false;
+                    expiration = i.expiration;
+                    destination = i.destination;
+                    refundAccount = i.refundAccount;
+                };
+                invoices.put(args.id, verifiedInvoice);
+
+                // TODO Transfer funds to default subaccount of invoice creator
+
+                return #Ok(#Paid{invoice = verifiedInvoice});
+            };
+        };
+    };
+// #endregion
+
+// #region Refund Invoice
+    public func refund_invoice () {
+        // TODO
+    };
+// #endregion
+
+// #region Transfer
+    type TransferArgs = {
+        amount: Nat;
+        token: Token;
+        destination: AccountIdentifier;
+        source: ?AccountIdentifier;
+    };
+    type TransferResult = {
+        #Ok: TransferSuccess;
+        #Err: TransferError;
+    };
+    type TransferSuccess = {
+        blockHeight: Nat;
+    };
+    type TransferError = {
+        #InsufficientFunds: {
+            balance: Nat;
+        };
+        #GenericException: {
+            message: Text;
         };
     };
 
@@ -326,21 +423,71 @@ actor Invoice {
                         e8s = 10000;
                     };
                 };
-                let foo = await ICP.transfer(icpTransferArgs);
+                let result = await ICP.transfer(icpTransferArgs);
             };
             case(_){
-                let bar = Debug.print("oops");
             };
         };
         ();
         // TODO - future tokens
     };
+// #endregion
 
+// #region get_caller_identifier
+    /*
+     * Get Caller Identifier
+     * Allows a caller to get their own account identifier
+     * for a specific token.
+     */
+    type GetCallerIdentifierArgs = {
+        token : Token;
+    };
+    type GetCallerIdentifierResult = {
+        #Ok: GetCallerIdentifierSuccess;
+        #Err: GetCallerIdentifierErr;
+    };
+    type GetCallerIdentifierSuccess = {
+        accountIdentifier: AccountIdentifier;
+    };
+    type GetCallerIdentifierErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken;
+        };
+    };
+    public shared query ({caller}) func get_caller_identifier (args: GetCallerIdentifierArgs) : async GetCallerIdentifierResult {
+        let token = args.token;
+        switch(token.symbol){
+            case("ICP"){
+                let subaccount = ICP.getDefaultSubaccount({caller});
+                let hexEncoded = Hex.encode(
+                    Blob.toArray(subaccount)
+                );
+                let result: AccountIdentifier = #text(hexEncoded);
+                #Ok({accountIdentifier = result});
+            };
+            case(_){
+                #Err({
+                    message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+                    kind = #InvalidToken;
+                });
+            };
+        };
+    };
+// #endregion
 
+// #region Utils
     func accountIdentifierToBlob (identifier: AccountIdentifier) : Blob {
         switch identifier {
             case(#text(identifier)){
-                return Text.encodeUtf8(identifier);
+                switch (Hex.decode(identifier)) {
+                    case(#ok v){
+                        return Blob.fromArray(v);
+                    };
+                    case(#err _){
+                        return "";
+                    };
+                };
             };
             case(#principal(identifier)){
                 return Principal.toBlob(identifier);
@@ -350,21 +497,34 @@ actor Invoice {
             };
         };
     };
-
-   
-    type hashIdArgs = {
-        caller: Principal;
+    func accountIdentifierToText (identifier: AccountIdentifier) : Text {
+        switch identifier {
+            case(#text(identifier)){
+                return identifier;
+            };
+            case(#principal(identifier)){
+                return Principal.toText(identifier);
+            };
+            case(#blob(identifier)){
+                return Hex.encode(Blob.toArray(identifier));
+            };
+        };
     };
+
 
     public query func remaining_cycles() : async Nat {
         return Cycles.balance()
     };
+// #endregion
 
+// #region Upgrade Hooks
     system func preupgrade() {
-        entries := Iter.toArray(invoices.vals());
+        entries := Iter.toArray(invoices.entries());
     };
 
     system func postupgrade() {
+        invoices := HashMap.fromIter(Iter.fromArray(entries), 16, Principal.equal, Principal.hash);
         entries := [];
     };
+// #endregion
 }

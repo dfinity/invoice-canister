@@ -1,6 +1,8 @@
 import Ledger "canister:ledger";
 import A "./Account";
+import Hex "./Hex";
 import Nat64 "mo:base/Nat64";
+import Blob "mo:base/Blob";
 
 module {
     public type Memo = Nat64;
@@ -54,18 +56,27 @@ module {
     };
 
     type AccountArgs = {
-        caller : Principal;
+        // Hex-encoded AccountIdentifier
+        account : Text;
     };
-    // Returns current balance on the default account of this canister.
-    public func canisterBalance(args: AccountArgs) : async Nat {
-        let defaultAccount =  {
-            account = A.accountIdentifier(args.caller, A.defaultSubaccount());
+    public func balance(args: AccountArgs) : async Nat {
+        switch (Hex.decode(args.account)){
+            case (#err err){
+                let balance : Nat = 0;
+                return balance;
+            };
+            case (#ok account) {
+                let balance = await Ledger.account_balance({account = Blob.fromArray(account)});
+                return Nat64.toNat(balance.e8s);
+            };
         };
-        let balance = await Ledger.account_balance(defaultAccount);
-        return Nat64.toNat(balance.e8s);
     };
 
-    public func getDefaultSubaccount(args: AccountArgs) : Blob {
+    type DefaultSubaccountArgs = {
+        // Hex-encoded AccountIdentifier
+        caller : Principal;
+    };
+    public func getDefaultSubaccount(args: DefaultSubaccountArgs) : Blob {
         A.accountIdentifier(args.caller, A.defaultSubaccount());
     };
 
