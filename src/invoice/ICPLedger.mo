@@ -62,6 +62,7 @@ module {
             to = args.to;
             created_at_time = args.created_at_time;
         });
+        Debug.print(Nat64.toText(result.block_index));
         return result;
     };
 
@@ -69,16 +70,27 @@ module {
         // Hex-encoded AccountIdentifier
         account : Text;
     };
-    public func balance(args: AccountArgs) : async Nat {
+    type BalanceResult = {
+        #Ok: {
+            balance: Nat;
+        };
+        #Err: {
+            error: Text;
+        };
+    };
+    public func balance(args: AccountArgs) : async BalanceResult {
         let meta : SelfMeta.Meta = SelfMeta.getMeta();
         switch (Hex.decode(args.account)){
             case (#err err){
-                let balance : Nat = 0;
-                return balance;
+                #Err({
+                    error = "Invalid account";
+                });
             };
             case (#ok account) {
                 let balance = await Ledger.account_balance({account = Blob.fromArray(account)});
-                return Nat64.toNat(balance.e8s);
+                #Ok({
+                    balance = Nat64.toNat(balance.e8s);
+                });
             };
         };
     };

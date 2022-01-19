@@ -290,9 +290,18 @@ actor Invoice {
         switch(token.symbol){
             case("ICP"){
                 let defaultSubaccount = Hex.encode(Blob.toArray(ICP.getDefaultSubaccount({caller})));
-                #Ok({
-                    balance = await ICP.balance({account = defaultSubaccount})
-                });
+                let balance = await ICP.balance({account = defaultSubaccount});
+                switch(balance){
+                    case(#Err err){
+                        #Err({
+                            message = ?"Could not get balance";
+                            kind = #NotFound;
+                        });
+                    };
+                    case(#Ok result){
+                        return #Ok({balance = result.balance});
+                    };
+                };
             };
             case(_){
                 #Err({
@@ -327,6 +336,7 @@ actor Invoice {
             #NotFound;
             #NotYetPaid;
             #Expired;
+            #TransferError;
         };
     };
     public shared ({caller}) func verify_invoice (args: VerifyInvoiceArgs) : async VerifyInvoiceResult {
@@ -349,73 +359,97 @@ actor Invoice {
 
                 // TODO - implement for multiple tokens
                 let destination = accountIdentifierToText(i.destination);
-                let balance = await ICP.balance({account = destination});
+                let balanceResult = await ICP.balance({account = destination});
 
-                // If balance is less than invoice amount, return error
-                if(balance < i.amount){
+                 switch(balanceResult){
+                    case(#Err err){
+                        #Err({
+                            message = ?"Could not get balance";
+                            kind = #NotFound;
+                        });
+                    };
+                    case(#Ok b){
+                        let balance = b.balance;
+                        // If balance is less than invoice amount, return error
+                        if(balance < i.amount){
 
-                    if(balance != i.amountPaid){
-                        let updatedInvoice = {
+                            if(balance != i.amountPaid){
+                                let updatedInvoice = {
+                                    id = i.id;
+                                    creator = caller;
+                                    details = i.details;
+                                    amount = i.amount;
+                                    // Update invoice with latest balance
+                                    amountPaid = balance;
+                                    token = i.token;
+                                    verifiedAtTime = i.verifiedAtTime;
+                                    paid = false;
+                                    refunded = false;
+                                    expiration = i.expiration;
+                                    destination = i.destination;
+                                    refundAccount = i.refundAccount;
+                                };
+                                let replaced = invoices.replace(i.id, updatedInvoice);
+                            };
+
+                            return #Err({
+                                message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
+                                kind = #NotYetPaid;
+                            });
+                        };
+
+                        let verifiedAtTime: ?Time = ?TimeBase.now();
+                        // Otherwise, update with latest balance and mark as paid
+                        let verifiedInvoice = {
                             id = i.id;
                             creator = caller;
                             details = i.details;
                             amount = i.amount;
-                            // Update invoice with latest balance
+                            // update amountPaid
                             amountPaid = balance;
                             token = i.token;
-                            verifiedAtTime = i.verifiedAtTime;
-                            paid = false;
+                            // update verifiedAtTime
+                            verifiedAtTime;
+                            // update paid
+                            paid = true;
                             refunded = false;
                             expiration = i.expiration;
                             destination = i.destination;
                             refundAccount = i.refundAccount;
                         };
-                        let replaced = invoices.replace(i.id, updatedInvoice);
-                    };
+                        invoices.put(args.id, verifiedInvoice);
 
-                    return #Err({
-                        message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
-                        kind = #NotYetPaid;
-                    });
+                        // TODO Transfer funds to default subaccount of invoice creator
+                        let subaccount: ICP.SubAccount = generateInvoiceId({ caller = i.creator; id = i.id });
+
+                        let transferResult = await ICP.transfer({
+                            memo = 0;
+                            fee = {
+                                e8s = 10000;
+                            };
+                            amount = {
+                                e8s = Nat64.fromNat(i.amount);
+                            };
+                            from_subaccount = ?subaccount;
+                            to = ICP.getDefaultSubaccount({caller});
+                            created_at_time = null;
+                        });
+                        switch (transferResult) {
+                            case (#Ok result) {
+                                return #Ok(#Paid{
+                                    invoice = verifiedInvoice;
+                                });
+                            };
+                            case (#Err _) {
+                                return #Err({
+                                    message = ?"Could not transfer funds to invoice creator.";
+                                    kind = #TransferError;
+                                });
+                            };
+                        };
+
+                    };
                 };
-
-                let verifiedAtTime: ?Time = ?TimeBase.now();
-                // Otherwise, update with latest balance and mark as paid
-                let verifiedInvoice = {
-                    id = i.id;
-                    creator = caller;
-                    details = i.details;
-                    amount = i.amount;
-                    // update amountPaid
-                    amountPaid = balance;
-                    token = i.token;
-                    // update verifiedAtTime
-                    verifiedAtTime;
-                    // update paid
-                    paid = true;
-                    refunded = false;
-                    expiration = i.expiration;
-                    destination = i.destination;
-                    refundAccount = i.refundAccount;
-                };
-                invoices.put(args.id, verifiedInvoice);
-
-                // TODO Transfer funds to default subaccount of invoice creator
-                let transferResult = await ICP.transfer({
-                    memo = 0;
-                    fee = {
-                        e8s = 10000;
-                    };
-                    amount = {
-                        e8s = Nat64.fromNat(i.amount);
-                    };
-                    account = i.destination;
-                    from_subaccount = ?ICP.getDefaultSubaccount({caller});
-                    to = ICP.getDefaultSubaccount({caller});
-                    created_at_time = null;
-                });
-
-                return #Ok(#Paid{invoice = verifiedInvoice});
             };
         };
     };
