@@ -1,10 +1,14 @@
 import Ledger "canister:ledger";
 import A "./Account";
 import SelfMeta "./SelfMeta";
+import SHA224 "./SHA224";
+import CRC32     "./CRC32";
 import Hex "./Hex";
 import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
+import Array "mo:base/Array";
 import Blob "mo:base/Blob";
+import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 
 module {
@@ -103,21 +107,32 @@ module {
         };
     };
 
-    type DefaultSubaccountArgs = {
+    type DefaultAccountArgs = {
         // Hex-encoded AccountIdentifier
         caller : Principal;
     };
-    public func getDefaultSubaccount(args: DefaultSubaccountArgs) : Blob {
+    public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
         let meta : SelfMeta.Meta = SelfMeta.getMeta();
         let canisterId = meta.canisterId;
-        A.accountIdentifier(canisterId, Principal.toBlob(args.caller));
+        A.accountIdentifier(canisterId, principalToSubaccount(args.caller));
     };
 
-    public type SubAccountArgs = {
+    public type GetICPAccountIdentifierArgs = {
         principal : Principal;
         subaccount : SubAccount;
     };
-    public func getICPSubaccount(args: SubAccountArgs) : Blob {
+    public func getICPAccountIdentifier(args: GetICPAccountIdentifierArgs) : Blob {
         A.accountIdentifier(args.principal, args.subaccount);
+    };
+
+    public func principalToSubaccount(principal: Principal) : Blob {
+        let idHash = SHA224.Digest();
+        idHash.write(Blob.toArray(Principal.toBlob(principal)));
+        let hashSum = idHash.sum();
+        let crc32Bytes = A.beBytes(CRC32.ofArray(hashSum));
+        let buf = Buffer.Buffer<Nat8>(32);
+        let blob = Blob.fromArray(Array.append(crc32Bytes, hashSum));
+
+        return blob;
     };
 }

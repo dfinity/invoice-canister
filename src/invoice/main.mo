@@ -14,7 +14,6 @@ import Buffer "mo:base/Buffer";
 import Cycles "mo:base/ExperimentalCycles";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
-import Float "mo:base/Float";
 import Hash "mo:base/Hash";
 import HashMap "mo:base/HashMap";
 import Int "mo:base/Int";
@@ -135,10 +134,6 @@ actor Invoice {
             };
         };
     };
-    type GenerateInvoiceIdArgs = {
-        caller: Principal;
-        id: Nat;
-    };
 
     func getTokenVerbose(token: Token) : TokenVerbose { 
         switch(token.symbol){
@@ -164,6 +159,10 @@ actor Invoice {
         };
     };
 
+    type GenerateInvoiceIdArgs = {
+        caller: Principal;
+        id: Nat;
+    };
     // Generate an invoice ID using hashed values from the invoice arguments
     func generateInvoiceId (args: GenerateInvoiceIdArgs) : Blob {
         let idHash = SHA224.Digest();
@@ -214,11 +213,11 @@ actor Invoice {
 
                 let subaccount: ICP.SubAccount = generateInvoiceId({ caller = args.caller; id = args.invoiceId });
 
-                let accountArgs: ICP.SubAccountArgs = {
+                let accountArgs: ICP.GetICPAccountIdentifierArgs = {
                     principal = canisterId;
                     subaccount = subaccount;
                 };
-                let account = ICP.getICPSubaccount(accountArgs);
+                let account = ICP.getICPAccountIdentifier(accountArgs);
                 let hexEncoded = Hex.encode(
                     Blob.toArray(account)
                 );
@@ -292,8 +291,8 @@ actor Invoice {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
-                let defaultSubaccount = Hex.encode(Blob.toArray(ICP.getDefaultSubaccount({caller})));
-                let balance = await ICP.balance({account = defaultSubaccount});
+                let defaultAccount = Hex.encode(Blob.toArray(ICP.getDefaultAccount({caller})));
+                let balance = await ICP.balance({account = defaultAccount});
                 switch(balance){
                     case(#Err err){
                         #Err({
@@ -434,7 +433,7 @@ actor Invoice {
                                 e8s = Nat64.sub(Nat64.fromNat(i.amount), 10000);
                             };
                             from_subaccount = ?subaccount;
-                            to = ICP.getDefaultSubaccount({caller});
+                            to = ICP.getDefaultAccount({caller});
                             created_at_time = null;
                         });
                         switch (transferResult) {
@@ -485,55 +484,83 @@ actor Invoice {
 
 // #region Transfer
     type TransferArgs = {
-        amount: Float;
+        amount: Nat;
         token: Token;
         destination: AccountIdentifier;
-        source: ?AccountIdentifier;
     };
     type TransferResult = {
         #Ok: TransferSuccess;
         #Err: TransferError;
     };
     type TransferSuccess = {
-        blockHeight: Nat;
+        blockHeight: Nat64;
     };
-    type TransferError = {
-        #InsufficientFunds: {
-            balance: Nat;
-        };
-        #GenericException: {
-            message: Text;
+     type TransferError = {
+        message: ?Text; 
+        kind: {
+            #BadFee;
+            #InsufficientFunds;
+            #InvalidToken;
+            #Other;
         };
     };
 
-    public shared ({caller}) func transfer (args: TransferArgs) : async () {
+    public shared ({caller}) func transfer (args: TransferArgs) : async TransferResult {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
                 let now = Nat64.fromIntWrap(TimeBase.now());
                 let destination : ICP.AccountIdentifier =  await accountIdentifierToBlob(args.destination);
 
-                let icpTransferArgs = {
-                    memo : ICP.Memo = 0;
-                    amount: ICP.Tokens = {
-                        // e8s are 10^-8 of a token
-                        e8s = Nat64.fromIntWrap(Float.toInt(args.amount * 100000000));
-                    };
-                    created_at_time: ?ICP.TimeStamp = ?{
-                        timestamp_nanos = now;
-                    };
-                    from_subaccount = ?Principal.toBlob(caller);
-                    to : ICP.AccountIdentifier = destination;
-                    fee : ICP.Tokens = {
+                let transferResult = await ICP.transfer({
+                    memo = 0;
+                    fee = {
                         e8s = 10000;
                     };
+                    amount = {
+                        // Total amount, minus the fee
+                        e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
+                    };
+                    from_subaccount = ?ICP.principalToSubaccount(caller);
+
+                    to = await accountIdentifierToBlob(args.destination);
+                    created_at_time = null;
+                });
+                switch (transferResult) {
+                    case (#Ok result) {
+                        return #Ok({blockHeight = result});
+                    };
+                    case (#Err err) {
+                        switch (err){
+                            case (#BadFee f){
+                                return #Err({
+                                    message = ?"Bad fee";
+                                    kind = #BadFee;
+                                });
+                            };
+                            case (#InsufficientFunds f){
+                                return #Err({
+                                    message = ?"Insufficient funds";
+                                    kind = #InsufficientFunds;
+                                });
+                            };
+                            case (_){
+                                return #Err({
+                                    message = ?"Could not transfer funds to invoice creator.";
+                                    kind = #Other;
+                                });
+                            }
+                        };
+                    };
                 };
-                let result = await ICP.transfer(icpTransferArgs);
             };
             case(_){
+                return #Err({
+                    message = ?"Token not supported";
+                    kind = #InvalidToken;
+                });
             };
         };
-        ();
         // TODO - future tokens
     };
 // #endregion
@@ -564,7 +591,7 @@ actor Invoice {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
-                let subaccount = ICP.getDefaultSubaccount({caller});
+                let subaccount = ICP.getDefaultAccount({caller});
                 let hexEncoded = Hex.encode(
                     Blob.toArray(subaccount)
                 );
