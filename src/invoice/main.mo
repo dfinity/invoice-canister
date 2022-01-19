@@ -10,6 +10,7 @@ import Prim "mo:⛔";
 
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
+import Buffer "mo:base/Buffer";
 import Cycles "mo:base/ExperimentalCycles";
 import Debug "mo:base/Debug";
 import Error "mo:base/Error";
@@ -176,7 +177,9 @@ actor Invoice {
         idHash.write(Blob.toArray(Principal.toBlob(args.caller)));
 
         let hashSum = idHash.sum();
-        let blob = Blob.fromArray(hashSum);
+        let crc32Bytes = A.beBytes(CRC32.ofArray(hashSum));
+        let buf = Buffer.Buffer<Nat8>(32);
+        let blob = Blob.fromArray(Array.append(crc32Bytes, hashSum));
 
         return blob;
     };
@@ -417,7 +420,6 @@ actor Invoice {
                             destination = i.destination;
                             refundAccount = i.refundAccount;
                         };
-                        invoices.put(args.id, verifiedInvoice);
 
                         // TODO Transfer funds to default subaccount of invoice creator
                         let subaccount: ICP.SubAccount = generateInvoiceId({ caller = i.creator; id = i.id });
@@ -428,7 +430,8 @@ actor Invoice {
                                 e8s = 10000;
                             };
                             amount = {
-                                e8s = Nat64.fromNat(i.amount);
+                                // Total amount, minus the fee
+                                e8s = Nat64.sub(Nat64.fromNat(i.amount), 10000);
                             };
                             from_subaccount = ?subaccount;
                             to = ICP.getDefaultSubaccount({caller});
@@ -436,17 +439,36 @@ actor Invoice {
                         });
                         switch (transferResult) {
                             case (#Ok result) {
+                                // Finally, update invoice
+                                invoices.put(args.id, verifiedInvoice);
                                 return #Ok(#Paid{
                                     invoice = verifiedInvoice;
                                 });
                             };
-                            case (#Err _) {
-                                return #Err({
-                                    message = ?"Could not transfer funds to invoice creator.";
-                                    kind = #TransferError;
-                                });
+                            case (#Err err) {
+                                switch (err){
+                                    case (#BadFee f){
+                                        return #Err({
+                                            message = ?"Bad fee";
+                                            kind = #TransferError;
+                                        });
+                                    };
+                                    case (#InsufficientFunds f){
+                                        return #Err({
+                                            message = ?"Insufficient funds";
+                                            kind = #TransferError;
+                                        });
+                                    };
+                                    case (_){
+                                        return #Err({
+                                            message = ?"Could not transfer funds to invoice creator.";
+                                            kind = #TransferError;
+                                        });
+                                    }
+                                };
                             };
                         };
+ 
 
                     };
                 };
@@ -500,7 +522,7 @@ actor Invoice {
                     created_at_time: ?ICP.TimeStamp = ?{
                         timestamp_nanos = now;
                     };
-                    from_subaccount : ?ICP.SubAccount = ?ICP.getDefaultSubaccount({caller});
+                    from_subaccount = ?Principal.toBlob(caller);
                     to : ICP.AccountIdentifier = destination;
                     fee : ICP.Tokens = {
                         e8s = 10000;

@@ -5,6 +5,7 @@ import Hex "./Hex";
 import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
 import Blob "mo:base/Blob";
+import Debug "mo:base/Debug";
 
 module {
     public type Memo = Nat64;
@@ -62,7 +63,14 @@ module {
             to = args.to;
             created_at_time = args.created_at_time;
         });
-        Debug.print(Nat64.toText(result.block_index));
+        switch (result){
+            case (#Ok index){
+                Debug.print(Nat64.toText(index));
+            };
+            case (#Err _){
+                Debug.print("Error");
+            };
+        };
         return result;
     };
 
