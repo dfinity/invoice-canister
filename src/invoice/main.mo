@@ -5,7 +5,6 @@ import Hex "./Hex";
 import CRC32     "./CRC32";
 import SHA256 "./SHA256";
 import SHA224    "./SHA224";
-import SelfMeta "./SelfMeta";
 import ICP "./ICPLedger";
 import Prim "mo:⛔";
 
@@ -35,7 +34,6 @@ actor Invoice {
     type TokenVerbose = T.TokenVerbose;
     type AccountIdentifier = T.AccountIdentifier;
     type Invoice = T.Invoice;
-    
 // #endregion
 
 /**
@@ -43,7 +41,6 @@ actor Invoice {
 */
 
 // #region State
-
     stable var invoiceCounter : Nat = 0;
     stable var entries : [(Nat, Invoice)] = [];
     var invoices: HashMap.HashMap<Nat, Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
@@ -171,8 +168,7 @@ actor Invoice {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
-                let meta : SelfMeta.Meta = SelfMeta.getMeta();
-                let canisterId = meta.canisterId;
+                let canisterId = Principal.fromActor(Invoice);
 
                 let account = ICP.getICPAccountIdentifier({
                     principal = canisterId;
@@ -250,9 +246,10 @@ actor Invoice {
     };
     public shared ({caller}) func get_balance (args: GetBalanceArgs) : async GetBalanceResult {
         let token = args.token;
+        let canisterId = Principal.fromActor(Invoice);
         switch(token.symbol){
             case("ICP"){
-                let defaultAccount = Hex.encode(Blob.toArray(ICP.getDefaultAccount({caller})));
+                let defaultAccount = Hex.encode(Blob.toArray(ICP.getDefaultAccount({caller; canisterId})));
                 let balance = await ICP.balance({account = defaultAccount});
                 switch(balance){
                     case(#Err err){
@@ -279,6 +276,7 @@ actor Invoice {
 // #region Verify Invoice
     public shared ({caller}) func verify_invoice (args: T.VerifyInvoiceArgs) : async T.VerifyInvoiceResult {
         let invoice = invoices.get(args.id);
+        let canisterId = Principal.fromActor(Invoice);
 
         switch(invoice){
             case(null){
@@ -299,7 +297,8 @@ actor Invoice {
                     case("ICP"){
                         let result: T.VerifyInvoiceResult = await ICP.verifyInvoice({
                             invoice = i;
-                            caller = caller;
+                            caller;
+                            canisterId;
                         });
                         switch (result){
                             case(#Ok value){
@@ -439,9 +438,10 @@ actor Invoice {
     };
     public shared query ({caller}) func get_caller_identifier (args: GetCallerIdentifierArgs) : async GetCallerIdentifierResult {
         let token = args.token;
+        let canisterId = Principal.fromActor(Invoice);
         switch(token.symbol){
             case("ICP"){
-                let subaccount = ICP.getDefaultAccount({caller});
+                let subaccount = ICP.getDefaultAccount({caller; canisterId;});
                 let hexEncoded = Hex.encode(
                     Blob.toArray(subaccount)
                 );

@@ -2,7 +2,6 @@ import Ledger "canister:ledger";
 import A "./Account";
 import T "./Types";
 import U "./Utils";
-import SelfMeta "./SelfMeta";
 import SHA224 "./SHA224";
 import CRC32     "./CRC32";
 import Hex "./Hex";
@@ -96,7 +95,6 @@ module {
         };
     };
     public func balance(args: AccountArgs) : async BalanceResult {
-        let meta : SelfMeta.Meta = SelfMeta.getMeta();
         switch (Hex.decode(args.account)){
             case (#err err){
                 #Err({
@@ -115,11 +113,10 @@ module {
     type DefaultAccountArgs = {
         // Hex-encoded AccountIdentifier
         caller : Principal;
+        canisterId : Principal;
     };
     public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
-        let meta : SelfMeta.Meta = SelfMeta.getMeta();
-        let canisterId = meta.canisterId;
-        A.accountIdentifier(canisterId, principalToSubaccount(args.caller));
+        A.accountIdentifier(args.canisterId, principalToSubaccount(args.caller));
     };
 
     public type GetICPAccountIdentifierArgs = {
@@ -144,6 +141,7 @@ module {
     public type ICPVerifyInvoiceArgs = {
         invoice : T.Invoice;
         caller : Principal;
+        canisterId : Principal;
     };
     public func verifyInvoice(args: ICPVerifyInvoiceArgs) : async T.VerifyInvoiceResult {
         let i = args.invoice;
@@ -219,7 +217,7 @@ module {
                         e8s = Nat64.sub(Nat64.fromNat(i.amount), 10000);
                     };
                     from_subaccount = ?subaccount;
-                    to = getDefaultAccount({caller = args.caller});
+                    to = getDefaultAccount({caller = args.caller; canisterId = args.canisterId});
                     created_at_time = null;
                 });
                 switch (transferResult) {

@@ -18,10 +18,4 @@ dfx deploy ledger --argument '(record {minting_account = "'${MINT_ACC}'"; initia
 rm src/ledger/ledger.did
 cp src/ledger/ledger.public.did src/ledger/ledger.did
 
-dfx canister create invoice
-
-# Deploy Invoice with meta
-export CANISTER_ID=$(dfx canister id invoice)
-envsubst < src/invoice/SelfMeta.tmpl > src/invoice/SelfMeta.mo
-
 dfx deploy invoice
