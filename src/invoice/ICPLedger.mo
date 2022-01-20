@@ -1,5 +1,7 @@
 import Ledger "canister:ledger";
 import A "./Account";
+import T "./Types";
+import U "./Utils";
 import SelfMeta "./SelfMeta";
 import SHA224 "./SHA224";
 import CRC32     "./CRC32";
@@ -9,7 +11,10 @@ import Principal "mo:base/Principal";
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Buffer "mo:base/Buffer";
+import Nat "mo:base/Nat";
 import Debug "mo:base/Debug";
+import Time "mo:base/Time";
+import Text "mo:base/Text";
 
 module {
     public type Memo = Nat64;
@@ -134,5 +139,121 @@ module {
         let blob = Blob.fromArray(Array.append(crc32Bytes, hashSum));
 
         return blob;
+    };
+
+    public type ICPVerifyInvoiceArgs = {
+        invoice : T.Invoice;
+        caller : Principal;
+    };
+    public func verifyInvoice(args: ICPVerifyInvoiceArgs) : async T.VerifyInvoiceResult {
+        let i = args.invoice;
+        let destination = U.accountIdentifierToText(i.destination);
+        let balanceResult = await balance({account = destination});
+
+        switch(balanceResult){
+            case(#Err err){
+                #Err({
+                    message = ?"Could not get balance";
+                    kind = #NotFound;
+                });
+            };
+            case(#Ok b){
+                let balance = b.balance;
+                // If balance is less than invoice amount, return error
+                if(balance < i.amount){
+
+                    if(balance != i.amountPaid){
+                        let updatedInvoice = {
+                            id = i.id;
+                            creator = args.caller;
+                            details = i.details;
+                            amount = i.amount;
+                            // Update invoice with latest balance
+                            amountPaid = balance;
+                            token = i.token;
+                            verifiedAtTime = i.verifiedAtTime;
+                            paid = false;
+                            refunded = false;
+                            expiration = i.expiration;
+                            destination = i.destination;
+                            refundAccount = i.refundAccount;
+                        };
+                    };
+
+                    return #Err({
+                        message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
+                        kind = #NotYetPaid;
+                    });
+                };
+
+                let verifiedAtTime: ?Time.Time = ?Time.now();
+                // Otherwise, update with latest balance and mark as paid
+                let verifiedInvoice = {
+                    id = i.id;
+                    creator = args.caller;
+                    details = i.details;
+                    amount = i.amount;
+                    // update amountPaid
+                    amountPaid = balance;
+                    token = i.token;
+                    // update verifiedAtTime
+                    verifiedAtTime;
+                    // update paid
+                    paid = true;
+                    refunded = false;
+                    expiration = i.expiration;
+                    destination = i.destination;
+                    refundAccount = i.refundAccount;
+                };
+
+                // TODO Transfer funds to default subaccount of invoice creator
+                let subaccount: SubAccount = U.generateInvoiceId({ caller = i.creator; id = i.id });
+
+                let transferResult = await transfer({
+                    memo = 0;
+                    fee = {
+                        e8s = 10000;
+                    };
+                    amount = {
+                        // Total amount, minus the fee
+                        e8s = Nat64.sub(Nat64.fromNat(i.amount), 10000);
+                    };
+                    from_subaccount = ?subaccount;
+                    to = getDefaultAccount({caller = args.caller});
+                    created_at_time = null;
+                });
+                switch (transferResult) {
+                    case (#Ok result) {
+                        return #Ok(#Paid{
+                            invoice = verifiedInvoice;
+                        });
+                    };
+                    case (#Err err) {
+                        switch (err){
+                            case (#BadFee f){
+                                return #Err({
+                                    message = ?"Bad fee";
+                                    kind = #TransferError;
+                                });
+                            };
+                            case (#InsufficientFunds f){
+                                return #Err({
+                                    message = ?"Insufficient funds";
+                                    kind = #TransferError;
+                                });
+                            };
+                            case (_){
+                                return #Err({
+                                    message = ?"Could not transfer funds to invoice creator.";
+                                    kind = #TransferError;
+                                });
+                            }
+                        };
+                    };
+                };
+
+
+            };
+        };
     };
 }

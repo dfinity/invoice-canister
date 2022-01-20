@@ -1,5 +1,6 @@
 import A "./Account";
 import T "./Types";
+import U "./Utils";
 import Hex "./Hex";
 import CRC32     "./CRC32";
 import SHA256 "./SHA256";
@@ -25,7 +26,7 @@ import Nat8 "mo:base/Nat8";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Text "mo:base/Text";
-import TimeBase "mo:base/Time";
+import Time "mo:base/Time";
 
 actor Invoice {
 // #region Types
@@ -33,22 +34,8 @@ actor Invoice {
     type Token = T.Token;
     type TokenVerbose = T.TokenVerbose;
     type AccountIdentifier = T.AccountIdentifier;
-    type Time = TimeBase.Time;
+    type Invoice = T.Invoice;
     
-    type Invoice = {
-        id: Nat;
-        creator: Principal;
-        details: ?Details;
-        amount: Nat;
-        amountPaid: Nat;
-        token: TokenVerbose;
-        verifiedAtTime: ?Time;
-        paid: Bool;
-        refunded: Bool;
-        expiration: Time;
-        destination: AccountIdentifier;
-        refundAccount: ?AccountIdentifier;
-    };
 // #endregion
 
 /**
@@ -123,7 +110,7 @@ actor Invoice {
                     paid = false;
                     refunded = false;
                     // 1 week in nanoseconds
-                    expiration = TimeBase.now() + (1000 * 60 * 60 * 24 * 7);
+                    expiration = Time.now() + (1000 * 60 * 60 * 24 * 7);
                     destination;
                     refundAccount = args.refundAccount;
                 };
@@ -159,31 +146,7 @@ actor Invoice {
         };
     };
 
-    type GenerateInvoiceIdArgs = {
-        caller: Principal;
-        id: Nat;
-    };
-    // Generate an invoice ID using hashed values from the invoice arguments
-    func generateInvoiceId (args: GenerateInvoiceIdArgs) : Blob {
-        let idHash = SHA224.Digest();
-        // Length of domain separator
-        idHash.write([0x0A]);
-        // Domain separator
-        idHash.write(Blob.toArray(Text.encodeUtf8("invoice-id")));
-        // Counter as Nonce
-        idHash.write([Nat8.fromNat(args.id)]);
-        // Principal of caller
-        idHash.write(Blob.toArray(Principal.toBlob(args.caller)));
-
-        let hashSum = idHash.sum();
-        let crc32Bytes = A.beBytes(CRC32.ofArray(hashSum));
-        let buf = Buffer.Buffer<Nat8>(32);
-        let blob = Blob.fromArray(Array.append(crc32Bytes, hashSum));
-
-        return blob;
-    };
-
-    // #region Get Destination Account Identifier
+// #region Get Destination Account Identifier
     type GetDestinationAccountIdentifierArgs = {
         token : Token;
         caller : Principal;
@@ -211,16 +174,14 @@ actor Invoice {
                 let meta : SelfMeta.Meta = SelfMeta.getMeta();
                 let canisterId = meta.canisterId;
 
-                let subaccount: ICP.SubAccount = generateInvoiceId({ caller = args.caller; id = args.invoiceId });
-
-                let accountArgs: ICP.GetICPAccountIdentifierArgs = {
+                let account = ICP.getICPAccountIdentifier({
                     principal = canisterId;
-                    subaccount = subaccount;
-                };
-                let account = ICP.getICPAccountIdentifier(accountArgs);
-                let hexEncoded = Hex.encode(
-                    Blob.toArray(account)
-                );
+                    subaccount = U.generateInvoiceId({ 
+                        caller = args.caller;
+                        id = args.invoiceId;
+                    });
+                });
+                let hexEncoded = Hex.encode(Blob.toArray(account));
                 let result: AccountIdentifier = #text(hexEncoded);
                 #Ok({accountIdentifier = result});
             };
@@ -316,32 +277,7 @@ actor Invoice {
 // #endregion
 
 // #region Verify Invoice
-    type VerifyInvoiceArgs = {
-        id: Nat;
-    };
-    type VerifyInvoiceResult = {
-        #Ok: VerifyInvoiceSuccess;
-        #Err: VerifyInvoiceErr;
-    };
-    type VerifyInvoiceSuccess = {
-        #Paid: {
-            invoice: Invoice;
-        };
-        #AlreadyVerified: {
-            invoice: Invoice;
-        };
-    };
-    type VerifyInvoiceErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidInvoiceId;
-            #NotFound;
-            #NotYetPaid;
-            #Expired;
-            #TransferError;
-        };
-    };
-    public shared ({caller}) func verify_invoice (args: VerifyInvoiceArgs) : async VerifyInvoiceResult {
+    public shared ({caller}) func verify_invoice (args: T.VerifyInvoiceArgs) : async T.VerifyInvoiceResult {
         let invoice = invoices.get(args.id);
 
         switch(invoice){
@@ -359,116 +295,30 @@ actor Invoice {
                     });
                 };
 
-                // TODO - implement for multiple tokens
-                let destination = accountIdentifierToText(i.destination);
-                let balanceResult = await ICP.balance({account = destination});
-
-                 switch(balanceResult){
-                    case(#Err err){
-                        #Err({
-                            message = ?"Could not get balance";
-                            kind = #NotFound;
+                switch (i.token.symbol){
+                    case("ICP"){
+                        let result: T.VerifyInvoiceResult = await ICP.verifyInvoice({
+                            invoice = i;
+                            caller = caller;
                         });
+                        switch (result){
+                            case(#Ok value){
+                                switch (value){
+                                    case(#AlreadyVerified _){};
+                                    case(#Paid paidResult){
+                                         let replaced = invoices.replace(i.id, paidResult.invoice);
+                                    };
+                                };
+                            };
+                            case(#Err _){};
+                        };
+                        return result;
                     };
-                    case(#Ok b){
-                        let balance = b.balance;
-                        // If balance is less than invoice amount, return error
-                        if(balance < i.amount){
-
-                            if(balance != i.amountPaid){
-                                let updatedInvoice = {
-                                    id = i.id;
-                                    creator = caller;
-                                    details = i.details;
-                                    amount = i.amount;
-                                    // Update invoice with latest balance
-                                    amountPaid = balance;
-                                    token = i.token;
-                                    verifiedAtTime = i.verifiedAtTime;
-                                    paid = false;
-                                    refunded = false;
-                                    expiration = i.expiration;
-                                    destination = i.destination;
-                                    refundAccount = i.refundAccount;
-                                };
-                                let replaced = invoices.replace(i.id, updatedInvoice);
-                            };
-
-                            return #Err({
-                                message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
-                                kind = #NotYetPaid;
-                            });
-                        };
-
-                        let verifiedAtTime: ?Time = ?TimeBase.now();
-                        // Otherwise, update with latest balance and mark as paid
-                        let verifiedInvoice = {
-                            id = i.id;
-                            creator = caller;
-                            details = i.details;
-                            amount = i.amount;
-                            // update amountPaid
-                            amountPaid = balance;
-                            token = i.token;
-                            // update verifiedAtTime
-                            verifiedAtTime;
-                            // update paid
-                            paid = true;
-                            refunded = false;
-                            expiration = i.expiration;
-                            destination = i.destination;
-                            refundAccount = i.refundAccount;
-                        };
-
-                        // TODO Transfer funds to default subaccount of invoice creator
-                        let subaccount: ICP.SubAccount = generateInvoiceId({ caller = i.creator; id = i.id });
-
-                        let transferResult = await ICP.transfer({
-                            memo = 0;
-                            fee = {
-                                e8s = 10000;
-                            };
-                            amount = {
-                                // Total amount, minus the fee
-                                e8s = Nat64.sub(Nat64.fromNat(i.amount), 10000);
-                            };
-                            from_subaccount = ?subaccount;
-                            to = ICP.getDefaultAccount({caller});
-                            created_at_time = null;
+                    case(_){
+                        return #Err({
+                            message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+                            kind = #InvalidToken;
                         });
-                        switch (transferResult) {
-                            case (#Ok result) {
-                                // Finally, update invoice
-                                invoices.put(args.id, verifiedInvoice);
-                                return #Ok(#Paid{
-                                    invoice = verifiedInvoice;
-                                });
-                            };
-                            case (#Err err) {
-                                switch (err){
-                                    case (#BadFee f){
-                                        return #Err({
-                                            message = ?"Bad fee";
-                                            kind = #TransferError;
-                                        });
-                                    };
-                                    case (#InsufficientFunds f){
-                                        return #Err({
-                                            message = ?"Insufficient funds";
-                                            kind = #TransferError;
-                                        });
-                                    };
-                                    case (_){
-                                        return #Err({
-                                            message = ?"Could not transfer funds to invoice creator.";
-                                            kind = #TransferError;
-                                        });
-                                    }
-                                };
-                            };
-                        };
- 
-
                     };
                 };
             };
@@ -509,8 +359,8 @@ actor Invoice {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
-                let now = Nat64.fromIntWrap(TimeBase.now());
-                let destination : ICP.AccountIdentifier =  await accountIdentifierToBlob(args.destination);
+                let now = Nat64.fromIntWrap(Time.now());
+                let destination : ICP.AccountIdentifier = U.accountIdentifierToBlob(args.destination);
 
                 let transferResult = await ICP.transfer({
                     memo = 0;
@@ -523,7 +373,7 @@ actor Invoice {
                     };
                     from_subaccount = ?ICP.principalToSubaccount(caller);
 
-                    to = await accountIdentifierToBlob(args.destination);
+                    to = U.accountIdentifierToBlob(args.destination);
                     created_at_time = null;
                 });
                 switch (transferResult) {
@@ -609,41 +459,6 @@ actor Invoice {
 // #endregion
 
 // #region Utils
-    public func accountIdentifierToBlob (identifier: AccountIdentifier) : async Blob {
-        switch identifier {
-            case(#text(identifier)){
-                switch (Hex.decode(identifier)) {
-                    case(#ok v){
-                        return Blob.fromArray(v);
-                    };
-                    case(#err _){
-                        return "";
-                    };
-                };
-            };
-            case(#principal(identifier)){
-                return Principal.toBlob(identifier);
-            };
-            case(#blob(identifier)){
-                return identifier;
-            };
-        };
-    };
-    func accountIdentifierToText (identifier: AccountIdentifier) : Text {
-        switch identifier {
-            case(#text(identifier)){
-                return identifier;
-            };
-            case(#principal(identifier)){
-                return Principal.toText(identifier);
-            };
-            case(#blob(identifier)){
-                return Hex.encode(Blob.toArray(identifier));
-            };
-        };
-    };
-
-
     public query func remaining_cycles() : async Nat {
         return Cycles.balance()
     };
