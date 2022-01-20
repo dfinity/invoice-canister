@@ -51,35 +51,12 @@ actor Invoice {
 */    
 
 // #region Create Invoice
-    type CreateInvoiceArgs = {
-        amount: Nat;
-        token: Token;
-        details: ?Details;
-        refundAccount: ?AccountIdentifier;
-    };
-    type CreateInvoiceResult = {
-        #Ok: CreateInvoiceSuccess;
-        #Err: CreateInvoiceErr;
-    };
-    type CreateInvoiceSuccess = {
-        invoice: Invoice;
-    };
-    type CreateInvoiceErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidToken;
-            #InvalidAmount;
-            #InvalidDestination;
-            #InvalidDetails;
-            #InvalidRefundAccount;
-        };
-    };
-    public shared ({caller}) func create_invoice (args: CreateInvoiceArgs) : async CreateInvoiceResult {
+    public shared ({caller}) func create_invoice (args: T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
         let id : Nat = invoiceCounter;
         // increment counter
         invoiceCounter += 1;
 
-        let destinationResult : GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({ 
+        let destinationResult : T.GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({ 
             token=args.token;
             invoiceId=id;
             caller 
@@ -144,27 +121,7 @@ actor Invoice {
     };
 
 // #region Get Destination Account Identifier
-    type GetDestinationAccountIdentifierArgs = {
-        token : Token;
-        caller : Principal;
-        invoiceId : Nat;
-    };
-    type GetDestinationAccountIdentifierResult = {
-        #Ok: GetDestinationAccountIdentifierSuccess;
-        #Err: GetDestinationAccountIdentifierErr;
-    };
-    type GetDestinationAccountIdentifierSuccess = {
-        accountIdentifier: AccountIdentifier;
-    };
-    type GetDestinationAccountIdentifierErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidToken;
-            #InvalidInvoiceId;
-        };
-    };
-
-    func getDestinationAccountIdentifier (args: GetDestinationAccountIdentifierArgs) : GetDestinationAccountIdentifierResult {
+    func getDestinationAccountIdentifier (args: T.GetDestinationAccountIdentifierArgs) : T.GetDestinationAccountIdentifierResult {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
@@ -193,24 +150,7 @@ actor Invoice {
 // #endregion
 
 // #region Get Invoice
-    type GetInvoiceArgs = {
-        id: Nat;
-    };
-    type GetInvoiceResult = {
-        #Ok: GetInvoiceSuccess;
-        #Err: GetInvoiceErr;
-    };
-    type GetInvoiceSuccess = {
-        invoice: Invoice;
-    };
-    type GetInvoiceErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidInvoiceId;
-            #NotFound;
-        };
-    };
-    public func get_invoice (args: GetInvoiceArgs) : async GetInvoiceResult {
+    public func get_invoice (args: T.GetInvoiceArgs) : async T.GetInvoiceResult {
         let invoice = invoices.get(args.id);
         switch(invoice){
             case(null){
@@ -227,24 +167,7 @@ actor Invoice {
 // #endregion
 
 // #region Get Balance
-    type GetBalanceArgs = {
-	    token: Token;
-    };
-    type GetBalanceResult = {
-        #Ok: GetBalanceSuccess;
-        #Err: GetBalanceErr;
-    };
-    type GetBalanceSuccess = {
-        balance: Nat;
-    };
-    type GetBalanceErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidToken;
-            #NotFound;
-        };
-    };
-    public shared ({caller}) func get_balance (args: GetBalanceArgs) : async GetBalanceResult {
+    public shared ({caller}) func get_balance (args: T.GetBalanceArgs) : async T.GetBalanceResult {
         let token = args.token;
         let canisterId = Principal.fromActor(Invoice);
         switch(token.symbol){
@@ -332,29 +255,7 @@ actor Invoice {
 // #endregion
 
 // #region Transfer
-    type TransferArgs = {
-        amount: Nat;
-        token: Token;
-        destination: AccountIdentifier;
-    };
-    type TransferResult = {
-        #Ok: TransferSuccess;
-        #Err: TransferError;
-    };
-    type TransferSuccess = {
-        blockHeight: Nat64;
-    };
-     type TransferError = {
-        message: ?Text; 
-        kind: {
-            #BadFee;
-            #InsufficientFunds;
-            #InvalidToken;
-            #Other;
-        };
-    };
-
-    public shared ({caller}) func transfer (args: TransferArgs) : async TransferResult {
+    public shared ({caller}) func transfer (args: T.TransferArgs) : async T.TransferResult {
         let token = args.token;
         switch(token.symbol){
             case("ICP"){
@@ -420,23 +321,7 @@ actor Invoice {
      * Allows a caller to get their own account identifier
      * for a specific token.
      */
-    type GetCallerIdentifierArgs = {
-        token : Token;
-    };
-    type GetCallerIdentifierResult = {
-        #Ok: GetCallerIdentifierSuccess;
-        #Err: GetCallerIdentifierErr;
-    };
-    type GetCallerIdentifierSuccess = {
-        accountIdentifier: AccountIdentifier;
-    };
-    type GetCallerIdentifierErr = {
-        message: ?Text; 
-        kind: {
-            #InvalidToken;
-        };
-    };
-    public shared query ({caller}) func get_caller_identifier (args: GetCallerIdentifierArgs) : async GetCallerIdentifierResult {
+    public shared query ({caller}) func get_caller_identifier (args: T.GetCallerIdentifierArgs) : async T.GetCallerIdentifierResult {
         let token = args.token;
         let canisterId = Principal.fromActor(Invoice);
         switch(token.symbol){

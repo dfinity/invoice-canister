@@ -1,6 +1,11 @@
 import Time "mo:base/Time";
 
 module {
+
+/**
+* Base Types
+*/
+// #region Base Types
     public type Token = {
         symbol: Text;
     };
@@ -34,8 +39,101 @@ module {
         destination: AccountIdentifier;
         refundAccount: ?AccountIdentifier;
     };
+// #endregion
 
-    // Verify Invoice
+/**
+* Service Args and Result Types
+*/  
+
+// #region create_invoice
+    public type CreateInvoiceArgs = {
+        amount: Nat;
+        token: Token;
+        details: ?Details;
+        refundAccount: ?AccountIdentifier;
+    };
+    public type CreateInvoiceResult = {
+        #Ok: CreateInvoiceSuccess;
+        #Err: CreateInvoiceErr;
+    };
+    public type CreateInvoiceSuccess = {
+        invoice: Invoice;
+    };
+    public type CreateInvoiceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken;
+            #InvalidAmount;
+            #InvalidDestination;
+            #InvalidDetails;
+            #InvalidRefundAccount;
+        };
+    };
+// #endregion
+
+// #region Get Destination Account Identifier
+    public type GetDestinationAccountIdentifierArgs = {
+        token : Token;
+        caller : Principal;
+        invoiceId : Nat;
+    };
+    public type GetDestinationAccountIdentifierResult = {
+        #Ok: GetDestinationAccountIdentifierSuccess;
+        #Err: GetDestinationAccountIdentifierErr;
+    };
+    public type GetDestinationAccountIdentifierSuccess = {
+        accountIdentifier: AccountIdentifier;
+    };
+    public type GetDestinationAccountIdentifierErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken;
+            #InvalidInvoiceId;
+        };
+    };
+// #endregion
+
+// #region get_invoice
+    public type GetInvoiceArgs = {
+        id: Nat;
+    };
+    public type GetInvoiceResult = {
+        #Ok: GetInvoiceSuccess;
+        #Err: GetInvoiceErr;
+    };
+    public type GetInvoiceSuccess = {
+        invoice: Invoice;
+    };
+    public type GetInvoiceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidInvoiceId;
+            #NotFound;
+        };
+    };
+// #endregion
+
+// #region get_balance
+    public type GetBalanceArgs = {
+	    token: Token;
+    };
+    public type GetBalanceResult = {
+        #Ok: GetBalanceSuccess;
+        #Err: GetBalanceErr;
+    };
+    public type GetBalanceSuccess = {
+        balance: Nat;
+    };
+    public type GetBalanceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken;
+            #NotFound;
+        };
+    };
+// #endregion
+
+// #region verify_invoice
     public type VerifyInvoiceArgs = {
         id: Nat;
     };
@@ -62,4 +160,48 @@ module {
             #InvalidToken;
         };
     };
+// #endregion
+
+// #region transfer
+    public type TransferArgs = {
+        amount: Nat;
+        token: Token;
+        destination: AccountIdentifier;
+    };
+    public type TransferResult = {
+        #Ok: TransferSuccess;
+        #Err: TransferError;
+    };
+    public type TransferSuccess = {
+        blockHeight: Nat64;
+    };
+    public type TransferError = {
+        message: ?Text; 
+        kind: {
+            #BadFee;
+            #InsufficientFunds;
+            #InvalidToken;
+            #Other;
+        };
+    };
+// #endregion
+
+// #region get_caller_identifier
+    public type GetCallerIdentifierArgs = {
+        token : Token;
+    };
+    public type GetCallerIdentifierResult = {
+        #Ok: GetCallerIdentifierSuccess;
+        #Err: GetCallerIdentifierErr;
+    };
+    public type GetCallerIdentifierSuccess = {
+        accountIdentifier: AccountIdentifier;
+    };
+    public type GetCallerIdentifierErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidToken;
+        };
+    };
+// #endregion
 };
