@@ -403,6 +403,9 @@ actor Invoice {
     public query func remaining_cycles() : async Nat {
         return Cycles.balance()
     };
+    public query func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async  Blob {
+        return U.accountIdentifierToBlob(accountIdentifier);
+    };
 // #endregion
 
 // #region Upgrade Hooks
