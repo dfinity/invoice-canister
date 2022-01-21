@@ -196,6 +196,7 @@ module {
                     token = i.token;
                     // update verifiedAtTime
                     verifiedAtTime;
+                    refundedAtTime = i.refundedAtTime;
                     // update paid
                     paid = true;
                     refunded = false;
@@ -249,8 +250,6 @@ module {
                         };
                     };
                 };
-
-
             };
         };
     };

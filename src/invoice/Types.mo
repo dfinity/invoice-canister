@@ -33,6 +33,7 @@ module {
         amountPaid: Nat;
         token: TokenVerbose;
         verifiedAtTime: ?Time.Time;
+        refundedAtTime: ?Time.Time;
         paid: Bool;
         refunded: Bool;
         expiration: Time.Time;
@@ -50,7 +51,6 @@ module {
         amount: Nat;
         token: Token;
         details: ?Details;
-        refundAccount: ?AccountIdentifier;
     };
     public type CreateInvoiceResult = {
         #Ok: CreateInvoiceSuccess;
@@ -66,7 +66,6 @@ module {
             #InvalidAmount;
             #InvalidDestination;
             #InvalidDetails;
-            #InvalidRefundAccount;
         };
     };
 // #endregion
@@ -201,6 +200,33 @@ module {
         message: ?Text; 
         kind: {
             #InvalidToken;
+        };
+    };
+// #endregion
+
+// #region refund_invoice
+    public type RefundInvoiceArgs = {
+        id: Nat;
+        refundAccount: AccountIdentifier;
+        amount: Nat;
+    };
+    public type RefundInvoiceResult = {
+        #Ok: RefundInvoiceSuccess;
+        #Err: RefundInvoiceErr;
+    };
+    public type RefundInvoiceSuccess = {
+        blockHeight: Nat64;
+    };
+    public type RefundInvoiceErr = {
+        message: ?Text; 
+        kind: {
+            #InvalidInvoiceId;
+            #NotFound;
+            #NotYetPaid;
+            #NoRefundDestination;
+            #TransferError;
+            #InvalidToken;
+            #AlreadyRefunded;
         };
     };
 // #endregion

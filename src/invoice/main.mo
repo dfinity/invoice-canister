@@ -81,12 +81,13 @@ actor Invoice {
                     amountPaid = 0;
                     token;
                     verifiedAtTime = null;
+                    refundedAtTime = null;
                     paid = false;
                     refunded = false;
                     // 1 week in nanoseconds
                     expiration = Time.now() + (1000 * 60 * 60 * 24 * 7);
                     destination;
-                    refundAccount = args.refundAccount;
+                    refundAccount = null;
                 };
                 
                 invoices.put(id, invoice);
@@ -249,8 +250,63 @@ actor Invoice {
 // #endregion
 
 // #region Refund Invoice
-    public func refund_invoice () {
-        // TODO
+    public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
+        let invoice = invoices.get(args.id);
+        switch (invoice){
+            case(null){
+                return #Err({
+                    message = ?"Invoice not found";
+                    kind = #NotFound;
+                });
+            };
+            case(? i){
+                // Return if already refunded
+                if (i.refundedAtTime != null){
+                    return #Err({
+                        message = ?"Invoice already refunded";
+                        kind = #AlreadyRefunded;
+                    });
+                };
+
+                var destination : AccountIdentifier = args.refundAccount;
+                
+                let transferResult = await transfer({
+                    amount = args.amount;
+                    token = i.token;
+                    destination = destination;
+                });
+
+                switch (transferResult){
+                    case(#Ok result){
+                        let updatedInvoice = {
+                            id = i.id;
+                            creator = i.creator;
+                            details = i.details;
+                            amount = i.amount;
+                            amountPaid = i.amountPaid;
+                            token = i.token;
+                            verifiedAtTime = i.verifiedAtTime;
+                            refundedAtTime = ?Time.now();
+                            paid = i.paid;
+                            refunded = true;
+                            expiration = i.expiration;
+                            destination = i.destination;
+                            refundAccount = ?destination;
+                        };
+                        let replaced = invoices.put(i.id, updatedInvoice);
+                        return #Ok({
+                            blockHeight = result.blockHeight;
+                        });
+                    };
+                    case(#Err _){
+                        return #Err({
+                            message = ?"Could not refund invoice";
+                            kind = #TransferError;
+                        });
+                    };
+                };
+            };
+        };
     };
 // #endregion
 
