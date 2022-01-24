@@ -87,3 +87,5 @@ dist
 
 # DFX
 .dfx
+test/_out
+.vessel

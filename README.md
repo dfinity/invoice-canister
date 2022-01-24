@@ -25,3 +25,11 @@ Get Invoice
 ```
 dfx canister call invoice get_invoice '(record { id = 1 })'
 ```
+
+## Testing
+
+To test, you will need to install `moc` from the latest `motoko-<system>-<version>.tar.gz` release. https://github.com/dfinity/motoko/releases.
+
+You will also need to install `wasmtime`. For macOS, you can install with `brew install wasmtime`. For Linux, you can install with `sudo apt-get install wasmtime`.
+
+To run tests, use `make test`.
