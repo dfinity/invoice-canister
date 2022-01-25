@@ -1,10 +1,8 @@
 /**
  * Module      : Hex.mo
  * Description : Hexadecimal encoding and decoding routines.
- * Copyright   : 2020 Enzo Haussecker
- * License     : Apache 2.0 with LLVM Exception
- * Maintainer  : Enzo Haussecker <enzo@dfinity.org>
- * Stability   : Stable
+ * Copyright   : 2022 Dfinity
+ * License     : Apache 2.0>
  */
 
 import Array "mo:base/Array";
@@ -13,6 +11,8 @@ import Option "mo:base/Option";
 import Nat8 "mo:base/Nat8";
 import Char "mo:base/Char";
 import Result "mo:base/Result";
+import Text "mo:base/Text";
+import Prim "mo:⛔";
 
 module {
 
@@ -36,9 +36,11 @@ module {
    * Encode an array of unsigned 8-bit integers in hexadecimal format.
    */
   public func encode(array : [Nat8]) : Text {
-    Array.foldLeft<Nat8, Text>(array, "", func (accum, w8) {
+    let encoded = Array.foldLeft<Nat8, Text>(array, "", func (accum, w8) {
       accum # encodeW8(w8);
     });
+    // encode as lowercase
+    return Text.map(encoded, Prim.charToLower);
   };
 
   /**
@@ -54,7 +56,9 @@ module {
    * Decode an array of unsigned 8-bit integers in hexadecimal format.
    */
   public func decode(text : Text) : Result<[Nat8], DecodeError> {
-    let next = text.chars().next;
+    // Transform to uppercase for uniform decoding
+    let upper = Text.map(text, Prim.charToUpper);
+    let next = upper.chars().next;
     func parse() : Result<Nat8, DecodeError> {
       Option.get<Result<Nat8, DecodeError>>(
         do ? {
@@ -70,7 +74,7 @@ module {
       );
     };
     var i = 0;
-    let n = text.size() / 2 + text.size() % 2;
+    let n = upper.size() / 2 + upper.size() % 2;
     let array = Array.init<Nat8>(n, 0);
     while (i != n) {
       switch (parse()) {

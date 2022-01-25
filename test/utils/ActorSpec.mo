@@ -16,16 +16,18 @@ module {
     failed : Nat;
     passed : Nat;
     pending : Nat;
+    skipped : Nat;
   };
 
   func eqStatus(x : Status, y : Status) : Bool {
-    x.failed == y.failed and x.passed == y.passed and x.pending == y.pending;
+    x.failed == y.failed and x.passed == y.passed and x.pending == y.pending and x.skipped == y.skipped;
   };
 
   let emptyStatus : Status = {
     failed = 0;
     passed = 0;
     pending = 0;
+    skipped = 0;
   };
 
   func appendStatus(x : Status, y : Status) : Status {
@@ -33,11 +35,12 @@ module {
       failed = x.failed + y.failed;
       passed = x.passed + y.passed;
       pending = x.pending + y.pending;
+      skipped = x.skipped + y.skipped;
     };
   };
 
   func printStatus(status : Status) : Text {
-    "Failed: " # Int.toText(status.failed) # ", Passed: " # Int.toText(status.passed) # ", Pending: " # Int.toText(status.pending);
+    "Failed: " # Int.toText(status.failed) # ", Passed: " # Int.toText(status.passed) # ", Pending: " # Int.toText(status.pending) # ", Skipped: " # Int.toText(status.skipped);
   };
 
 
@@ -80,12 +83,14 @@ module {
         let failed = status.failed;
         let passed = status.passed;
         let pending = status.pending;
-        switch(failed, passed, pending) {
-          case (0, 0, 0) { ""; };
-          case (1, 0, 0) { ": Failed"; };
-          case (0, 1, 0) { ": Passed"; };
-          case (0, 0, 1) { ": Pending"; };
-          case (_, _, _) { ":" # printStatus(status); };
+        let skipped = status.skipped;
+        switch(failed, passed, pending, skipped) {
+          case (0, 0, 0, 0) { ""; };
+          case (1, 0, 0, 0) { ": Failed"; };
+          case (0, 1, 0, 0) { ": Passed"; };
+          case (0, 0, 1, 0) { ": Pending"; };
+          case (0, 0, 0, 1) { ": Skipped"; };
+          case (_, _, _, _) { ":" # printStatus(status); };
         };
       };
       Debug.print(newline # indent # group.name # statusText # "\n");
@@ -110,11 +115,25 @@ module {
         failed = if passed_ 0 else 1;
         passed = if passed_ 1 else 0;
         pending = 0;
+        skipped = 0;
       };
     };
   };
 
   public let test = it;
+
+  public func skip(name_ : Text, passed_ : Bool) : Group {
+    {
+      name = name_;
+      groups = [];
+      status = {
+        failed = 0;
+        passed = 0;
+        pending = 0;
+        skipped = 1;
+      };
+    };
+  };
 
   public func pending(name_ : Text) : Group {
     {
@@ -124,6 +143,7 @@ module {
         failed = 0;
         passed = 0;
         pending = 1;
+        skipped = 0;
       };
     };
   };

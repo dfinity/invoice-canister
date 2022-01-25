@@ -327,7 +327,7 @@ actor Invoice {
                         // Total amount, minus the fee
                         e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
                     };
-                    from_subaccount = ?ICP.principalToSubaccount(caller);
+                    from_subaccount = ?A.principalToSubaccount(caller);
 
                     to = U.accountIdentifierToBlob(args.destination);
                     created_at_time = null;

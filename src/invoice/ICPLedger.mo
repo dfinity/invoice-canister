@@ -116,7 +116,7 @@ module {
         canisterId : Principal;
     };
     public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
-        A.accountIdentifier(args.canisterId, principalToSubaccount(args.caller));
+        A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.caller));
     };
 
     public type GetICPAccountIdentifierArgs = {
@@ -125,17 +125,6 @@ module {
     };
     public func getICPAccountIdentifier(args: GetICPAccountIdentifierArgs) : Blob {
         A.accountIdentifier(args.principal, args.subaccount);
-    };
-
-    public func principalToSubaccount(principal: Principal) : Blob {
-        let idHash = SHA224.Digest();
-        idHash.write(Blob.toArray(Principal.toBlob(principal)));
-        let hashSum = idHash.sum();
-        let crc32Bytes = A.beBytes(CRC32.ofArray(hashSum));
-        let buf = Buffer.Buffer<Nat8>(32);
-        let blob = Blob.fromArray(Array.append(crc32Bytes, hashSum));
-
-        return blob;
     };
 
     public type ICPVerifyInvoiceArgs = {
