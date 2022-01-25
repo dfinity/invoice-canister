@@ -130,7 +130,7 @@ actor Invoice {
 
                 let account = ICP.getICPAccountIdentifier({
                     principal = canisterId;
-                    subaccount = U.generateInvoiceId({ 
+                    subaccount = U.generateInvoiceSubaccount({ 
                         caller = args.caller;
                         id = args.invoiceId;
                     });

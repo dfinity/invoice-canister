@@ -195,7 +195,7 @@ module {
                 };
 
                 // TODO Transfer funds to default subaccount of invoice creator
-                let subaccount: SubAccount = U.generateInvoiceId({ caller = i.creator; id = i.id });
+                let subaccount: SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
 
                 let transferResult = await transfer({
                     memo = 0;

@@ -46,12 +46,12 @@ module {
         };
     };
 
-    type GenerateInvoiceIdArgs = {
+    type GenerateInvoiceSubaccountArgs = {
         caller: Principal;
         id: Nat;
     };
     // Generate an invoice ID using hashed values from the invoice arguments
-    public func generateInvoiceId (args: GenerateInvoiceIdArgs) : Blob {
+    public func generateInvoiceSubaccount (args: GenerateInvoiceSubaccountArgs) : Blob {
         let idHash = SHA224.Digest();
         // Length of domain separator
         idHash.write([0x0A]);

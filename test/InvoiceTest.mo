@@ -4,6 +4,8 @@ import Hex "../src/invoice/Hex";
 import Principal "mo:base/Principal";
 import Debug "mo:base/Debug";
 import Blob "mo:base/Blob";
+import Text "mo:base/Text";
+import Result "mo:base/Result";
 
 import ActorSpec "./utils/ActorSpec";
 type Group = ActorSpec.Group;
@@ -18,6 +20,18 @@ let run = ActorSpec.run;
 let testPrincipal = Principal.fromText("rrkah-fqaaa-aaaaa-aaaaq-cai");
 let testCaller = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
 let defaultSubaccount = A.defaultSubaccount();
+
+func defaultAccountBlob() : Blob {
+    let decoded = Hex.decode("082ecf2e3f647ac600f43f38a68342fba5b8e68b085f02592b77f39808a8d2b5");
+    switch(decoded){
+      case(#err _) {
+        return Text.encodeUtf8("");
+      };
+      case(#ok arr) {
+        return Blob.fromArray(arr);
+      };
+    }
+};
 
 run([
   describe("ICP Tests", [
@@ -46,31 +60,35 @@ run([
         assertTrue(true);
       }),
       it("should convert a #blob accountIdentifier to Text", do {
-        let blob = Hex.decode("082ecf2e3f647ac600f43f38a68342fba5b8e68b085f02592b77f39808a8d2b5");
-        switch(blob){
-          case (#err _){
-            false;
-          };
-          case (#ok b){
-            let text = U.accountIdentifierToText(#blob(Blob.fromArray(b)));
-            assertTrue(text == "082ecf2e3f647ac600f43f38a68342fba5b8e68b085f02592b77f39808a8d2b5");
-          };
-        };
-
+        let defaultBlob = defaultAccountBlob();
+        let text = U.accountIdentifierToText(#blob(defaultBlob));
+        assertTrue(text == "082ecf2e3f647ac600f43f38a68342fba5b8e68b085f02592b77f39808a8d2b5");
       }),
-      skip("should convert a #text accountIdentifier to Blob", do {
-        assertTrue(true);
+      it("should convert a #text accountIdentifier to Blob", do {
+        let id = #text("082ecf2e3f647ac600f43f38a68342fba5b8e68b085f02592b77f39808a8d2b5");
+        let blob = U.accountIdentifierToBlob(id);
+        let defaultBlob = defaultAccountBlob();
+        assertTrue(blob == defaultBlob);
       }),
       skip("should convert a #principal accountIdentifier to Blob", do {
+        // TODO - figure out what this behavior is supposed to be
         assertTrue(true);
       }),
-      skip("should convert a #blob accountIdentifier to Blob", do {
-        assertTrue(true);
+      it("should convert a #blob accountIdentifier to Blob", do {
+        let defaultBlob = defaultAccountBlob();
+        let id = #blob(defaultBlob);
+        let blob = U.accountIdentifierToBlob(id);
+        assertTrue(blob == defaultBlob);
       }),
     ]),
-    describe("Invoice ID", [
-      skip("should generate a valid invoice ID", do {
-        assertTrue(true);
+    describe("Invoice Subaccount Creation", [
+      it("should generate a valid invoice ID", do {
+        let subaccount = U.generateInvoiceSubaccount({
+          caller = testCaller;
+          id = 0;
+        });
+        
+        assertTrue(A.validateAccountIdentifier(subaccount));
       }),
     ])
   ]),
