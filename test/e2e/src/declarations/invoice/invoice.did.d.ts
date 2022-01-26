@@ -95,7 +95,8 @@ export interface TransferArgs {
   'amount' : bigint,
 }
 export interface TransferError {
-  'kind' : { 'BadFee' : null } |
+  'kind' : { 'InvalidDestination' : null } |
+    { 'BadFee' : null } |
     { 'InvalidToken' : null } |
     { 'Other' : null } |
     { 'InsufficientFunds' : null },

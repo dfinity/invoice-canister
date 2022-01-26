@@ -316,7 +316,22 @@ actor Invoice {
         switch(token.symbol){
             case("ICP"){
                 let now = Nat64.fromIntWrap(Time.now());
-                let destination : ICP.AccountIdentifier = U.accountIdentifierToBlob(args.destination);
+                try {
+                    let destination : ICP.AccountIdentifier = await U.accountIdentifierToBlob(args.destination);
+
+                    let validated = A.validateAccountIdentifier(destination);
+                    if(validated == false){
+                        return #Err({
+                            message = ?"Invalid destination account identifier for ICP";
+                            kind = #InvalidDestination;
+                        });
+                    };
+                } catch (e) {
+                    return #Err({
+                        message = ?"Invalid destination account identifier for ICP";
+                        kind = #InvalidDestination;
+                    });
+                };
 
                 let transferResult = await ICP.transfer({
                     memo = 0;
@@ -329,7 +344,7 @@ actor Invoice {
                     };
                     from_subaccount = ?A.principalToSubaccount(caller);
 
-                    to = U.accountIdentifierToBlob(args.destination);
+                    to = await U.accountIdentifierToBlob(args.destination);
                     created_at_time = null;
                 });
                 switch (transferResult) {
@@ -403,8 +418,9 @@ actor Invoice {
     public query func remaining_cycles() : async Nat {
         return Cycles.balance()
     };
-    public query func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async  Blob {
-        return U.accountIdentifierToBlob(accountIdentifier);
+    public func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async Blob {
+        let blob = await U.accountIdentifierToBlob(accountIdentifier);
+        blob;
     };
 // #endregion
 

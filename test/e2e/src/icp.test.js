@@ -137,8 +137,27 @@ describe("ICP Tests", () => {
         expect(newBalance).toStrictEqual({ "Ok": { balance: 990000n } });
       }
     });
-    it.skip("should allow a caller to transfer out of their account to another valid account", async () => {});
-    it.skip("should not allow a caller to transfer to an invalid account", async () => {});
+    it("should not allow a caller to transfer to an invalid account", async () => {
+      try {
+        let transferResult = await balanceHolder.transfer({
+          amount: 1000000n,
+          token: {
+            symbol: "ICP",
+          },
+          destination: {
+            text: "abc123",
+          },
+        });
+        expect(transferResult.Err).toStrictEqual({
+          Err: {
+            kind: { InvalidDestination: null },
+            message: ["Invalid destination account identifier for ICP"],
+          },
+        });
+      } catch (error) {
+        console.trace(error);
+      }
+    });
     it.skip("should not allow a caller to transfer more than their balance", async () => {});
   });
 });

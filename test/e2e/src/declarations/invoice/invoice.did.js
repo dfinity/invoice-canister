@@ -119,6 +119,7 @@ export const idlFactory = ({ IDL }) => {
   const TransferSuccess = IDL.Record({ 'blockHeight' : IDL.Nat64 });
   const TransferError = IDL.Record({
     'kind' : IDL.Variant({
+      'InvalidDestination' : IDL.Null,
       'BadFee' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'Other' : IDL.Null,
@@ -154,7 +155,7 @@ export const idlFactory = ({ IDL }) => {
     'accountIdentifierToBlob' : IDL.Func(
         [AccountIdentifier__1],
         [IDL.Vec(IDL.Nat8)],
-        ['query'],
+        [],
       ),
     'create_invoice' : IDL.Func([CreateInvoiceArgs], [CreateInvoiceResult], []),
     'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),

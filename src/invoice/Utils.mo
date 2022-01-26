@@ -7,12 +7,13 @@ import Blob "mo:base/Blob";
 import Buffer "mo:base/Buffer";
 import Principal "mo:base/Principal";
 import Text "mo:base/Text";
+import Error "mo:base/Error";
 import Nat8 "mo:base/Nat8";
 import Array "mo:base/Array";
 
 module {
     type AccountIdentifier = T.AccountIdentifier;
-    public func accountIdentifierToBlob (identifier: AccountIdentifier) : Blob {
+    public func accountIdentifierToBlob (identifier: AccountIdentifier) : async Blob {
         switch identifier {
             case(#text(identifier)){
                 switch (Hex.decode(identifier)) {
@@ -20,7 +21,7 @@ module {
                         return Blob.fromArray(v);
                     };
                     case(#err _){
-                        return "";
+                        throw Error.reject("Invalid hex encoding");
                     };
                 };
             };

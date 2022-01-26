@@ -32,7 +32,7 @@ export const createActor = (canisterId, options) => {
     ...options?.actorOptions,
   });
 };
-
+  
 /**
  * A ready-to-use agent for the invoice canister
  * @type {import("@dfinity/agent").ActorSubclass<import("./invoice.did.js")._SERVICE>}

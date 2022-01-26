@@ -180,6 +180,7 @@ module {
             #BadFee;
             #InsufficientFunds;
             #InvalidToken;
+            #InvalidDestination;
             #Other;
         };
     };

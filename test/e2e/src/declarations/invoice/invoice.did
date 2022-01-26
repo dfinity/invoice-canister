@@ -30,12 +30,14 @@ type TransferResult =
  };
 type TransferError = 
  record {
-   kind: variant {
-           BadFee;
-           InsufficientFunds;
-           InvalidToken;
-           Other;
-         };
+   kind:
+    variant {
+      BadFee;
+      InsufficientFunds;
+      InvalidDestination;
+      InvalidToken;
+      Other;
+    };
    message: opt text;
  };
 type TransferArgs = 
@@ -178,7 +180,7 @@ type AccountIdentifier =
    "text": text;
  };
 service : {
-  accountIdentifierToBlob: (AccountIdentifier__1) -> (blob) query;
+  accountIdentifierToBlob: (AccountIdentifier__1) -> (blob);
   create_invoice: (CreateInvoiceArgs) -> (CreateInvoiceResult);
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
   get_caller_identifier: (GetCallerIdentifierArgs) ->

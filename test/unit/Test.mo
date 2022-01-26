@@ -39,7 +39,7 @@ let success = run([
     describe("Account Identifiers Utilities", [
       it("should generate a valid account identifier", do {
         let account = A.accountIdentifier(testPrincipal, defaultSubaccount);
-        assertTrue(A.validateAccountIdentifier(account));
+        assertTrue(await A.validateAccountIdentifier(account));
       }),
       it("should convert a principal to a subaccount", do {
         let subaccount = A.principalToSubaccount(testCaller);
@@ -49,7 +49,7 @@ let success = run([
       it("should generate a valid default account for a caller", do {
         let subaccount = A.principalToSubaccount(testCaller);
         let accountIdentifier = A.accountIdentifier(testPrincipal, subaccount);
-        assertTrue(A.validateAccountIdentifier(accountIdentifier));
+        assertTrue(await A.validateAccountIdentifier(accountIdentifier));
       }),
       it("should convert a #text accountIdentifier to Text", do {
         let account = A.accountIdentifier(testPrincipal, defaultSubaccount);
@@ -89,7 +89,7 @@ let success = run([
           id = 0;
         });
         
-        assertTrue(A.validateAccountIdentifier(subaccount));
+        assertTrue(await A.validateAccountIdentifier(subaccount));
       }),
     ])
   ]),
