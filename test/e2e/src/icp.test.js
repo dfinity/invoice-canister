@@ -3,12 +3,14 @@ const { defaultActor, balanceHolder, recipient } = identityUtils;
 
 const encoder = new TextEncoder();
 
+const FEE = 10000n;
+
 const testMeta = {
   seller: "ExampleSeller",
   token: "1234",
 };
 const testInvoice = {
-  amount: 10000n,
+  amount: 1000000n,
   token: {
     symbol: "ICP",
   },
@@ -26,7 +28,9 @@ beforeAll(async () => {
   createResult = await defaultActor.create_invoice(testInvoice);
 });
 
-afterAll(async () => {
+let balanceNeedsReset = false;
+const resetBalance = async () => {
+  if (!balanceNeedsReset) return;
   let balance = await defaultActor.get_balance({
     token: {
       symbol: "ICP",
@@ -47,6 +51,13 @@ afterAll(async () => {
       });
     }
   }
+};
+afterEach(async () => {
+  await resetBalance();
+});
+afterAll(async () => {
+  balanceNeedsReset = true;
+  await resetBalance();
 });
 
 describe("ICP Tests", () => {
@@ -105,9 +116,42 @@ describe("ICP Tests", () => {
         throw new Error(invoice.Err.message);
       }
     });
-    it.skip("should not mark a payment verified if the balance has not been paid", async () => {});
-    it.skip("should a payment verified if the balance has been paid", async () => {});
-    it.skip("should return AlreadyVerified if an invoice has already been verified", async () => {});
+    it("should not mark a payment verified if the balance has not been paid", async () => {
+      let verifyResult = await defaultActor.verify_invoice({
+        id: createResult.Ok.invoice.id,
+      });
+      expect(verifyResult).toStrictEqual({
+        Err: {
+          kind: { NotYetPaid: null },
+          message: ["Insufficient balance. Current Balance is 0"],
+        },
+      });
+    });
+    it("should a payment verified if the balance has been paid", async () => {
+      // Transfer balance to the balance holder
+      await balanceHolder.transfer({
+        amount: createResult.Ok.invoice.amount + FEE,
+        token: {
+          symbol: "ICP",
+        },
+        destination: createResult.Ok?.invoice?.destination,
+      });
+
+      // Verify the invoice
+      let verifyResult = await defaultActor.verify_invoice({
+        id: createResult.Ok.invoice.id,
+      });
+      expect(verifyResult.Ok?.Paid?.invoice?.paid).toBe(true);
+      balanceNeedsReset = true;
+    });
+  });
+  describe("already completed Invoice", () => {
+    it("should return AlreadyVerified if an invoice has already been verified", async () => {
+      let verifyResult = await defaultActor.verify_invoice({
+        id: createResult.Ok.invoice.id,
+      });
+      expect(verifyResult.Ok.AlreadyVerified).toBeTruthy();
+    });
     it.skip("should allow a seller to refund a paid invoice", async () => {});
   });
   /**
@@ -117,7 +161,7 @@ describe("ICP Tests", () => {
     it("should increase a caller's icp balance after transferring to that account", async () => {
       let destination = await defaultActor.get_caller_identifier({
         token: { symbol: "ICP" },
-      }); //?
+      });
       let transferResult = await balanceHolder.transfer({
         amount: 1000000n,
         token: {
@@ -125,16 +169,14 @@ describe("ICP Tests", () => {
         },
         destination: destination.Ok.accountIdentifier,
       });
-      console.log(transferResult);
       if ("Ok" in transferResult) {
         let newBalance = await defaultActor.get_balance({
           token: {
             symbol: "ICP",
           },
         });
-        console.log(newBalance);
-        // prettier-ignore
-        expect(newBalance).toStrictEqual({ "Ok": { balance: 990000n } });
+        expect(newBalance).toStrictEqual({ Ok: { balance: 990000n } });
+        balanceNeedsReset = true;
       }
     });
     it("should not allow a caller to transfer to an invalid account", async () => {
@@ -157,6 +199,7 @@ describe("ICP Tests", () => {
       } catch (error) {
         console.trace(error);
       }
+      balanceNeedsReset = true;
     });
     it.skip("should not allow a caller to transfer more than their balance", async () => {});
   });
