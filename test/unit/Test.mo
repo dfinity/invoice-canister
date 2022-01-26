@@ -1,11 +1,12 @@
-import A "../src/invoice/Account";
-import U "../src/invoice/Utils";
-import Hex "../src/invoice/Hex";
+import A "../../src/invoice/Account";
+import U "../../src/invoice/Utils";
+import Hex "../../src/invoice/Hex";
 import Principal "mo:base/Principal";
 import Debug "mo:base/Debug";
 import Blob "mo:base/Blob";
 import Text "mo:base/Text";
 import Result "mo:base/Result";
+import Prim "mo:⛔";
 
 import ActorSpec "./utils/ActorSpec";
 type Group = ActorSpec.Group;
@@ -33,7 +34,7 @@ func defaultAccountBlob() : Blob {
     }
 };
 
-run([
+let success = run([
   describe("ICP Tests", [
     describe("Account Identifiers Utilities", [
       it("should generate a valid account identifier", do {
@@ -93,3 +94,7 @@ run([
     ])
   ]),
 ]);
+
+if(success == false){
+  Prim.trap("Tests failed");
+}

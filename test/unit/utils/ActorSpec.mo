@@ -2,6 +2,7 @@ import Debug "mo:base/Debug";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Int "mo:base/Int";
+import Nat "mo:base/Nat";
 import Text "mo:base/Text";
 
 module {
@@ -49,7 +50,6 @@ module {
     printGroups(groups, "");
     Debug.print("\n");
     Debug.print(printStatus(status));
-    Debug.print("\n");
     Debug.print("\n");
     status.failed == 0;
   };
