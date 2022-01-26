@@ -201,6 +201,17 @@ describe("ICP Tests", () => {
       }
       balanceNeedsReset = true;
     });
-    it.skip("should not allow a caller to transfer more than their balance", async () => {});
+    it("should not allow a caller to transfer more than their balance", async () => {
+      let transferResult = await defaultActor.transfer({
+        amount: 1000000n,
+        token: {
+          symbol: "ICP",
+        },
+        destination: {
+          text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
+        },
+      });
+      expect(transferResult.Err).toBeTruthy();
+    });
   });
 });

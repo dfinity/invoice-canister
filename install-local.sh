@@ -1,5 +1,5 @@
 dfx stop
-dfx start --background --clean
+dfx start --background --clean --no-artificial-delay
 
 dfx identity new minter
 dfx identity use minter
