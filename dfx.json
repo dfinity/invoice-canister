@@ -5,7 +5,10 @@
                 "ledger"
             ],
             "main": "src/invoice/main.mo",
-            "type": "motoko"
+            "type": "motoko",
+            "declarations": {
+                "output": "test/e2e/src/declarations"
+            }
         },
         "ledger": {
             "type": "custom",
