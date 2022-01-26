@@ -60,6 +60,8 @@ afterAll(async () => {
   await resetBalance();
 });
 
+jest.setTimeout(60000);
+
 describe("ICP Tests", () => {
   /**
    * Account tests
@@ -144,6 +146,60 @@ describe("ICP Tests", () => {
       expect(verifyResult.Ok?.Paid?.invoice?.paid).toBe(true);
       balanceNeedsReset = true;
     });
+    it("should handle a full flow, with a refund", async () => {
+      const newInvoice = await defaultActor.create_invoice(testInvoice);
+      await balanceHolder.transfer({
+        amount: newInvoice.Ok.invoice.amount + FEE,
+        token: {
+          symbol: "ICP",
+        },
+        destination: newInvoice.Ok?.invoice?.destination,
+      });
+      const verification = await defaultActor.verify_invoice({
+        id: newInvoice.Ok.invoice.id,
+      });
+      expect(verification.Ok?.Paid?.invoice?.paid).toBe(true);
+
+      const refund = await defaultActor.refund_invoice({
+        id: newInvoice.Ok.invoice.id,
+        // refunding the full amount minus the fee
+        amount: newInvoice.Ok.invoice.amount - FEE,
+        refundAccount: {
+          text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
+        },
+      });
+      console.log(refund);
+      balanceNeedsReset = true;
+    });
+    it("should handle refund errors successfully", async () => {
+      const newInvoice = await defaultActor.create_invoice(testInvoice);
+      await balanceHolder.transfer({
+        amount: newInvoice.Ok.invoice.amount + FEE,
+        token: {
+          symbol: "ICP",
+        },
+        destination: newInvoice.Ok?.invoice?.destination,
+      });
+      const verification = await defaultActor.verify_invoice({
+        id: newInvoice.Ok.invoice.id,
+      });
+      expect(verification.Ok?.Paid?.invoice?.paid).toBe(true);
+
+      const refund = await defaultActor.refund_invoice({
+        id: newInvoice.Ok.invoice.id,
+        amount: newInvoice.Ok.invoice.amount,
+        refundAccount: {
+          text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
+        },
+      });
+      expect(refund).toStrictEqual({
+        Err: {
+          kind: { TransferError: null },
+          message: ["Could not refund invoice"],
+        },
+      });
+      balanceNeedsReset = true;
+    });
   });
   describe("already completed Invoice", () => {
     it("should return AlreadyVerified if an invoice has already been verified", async () => {
@@ -152,7 +208,6 @@ describe("ICP Tests", () => {
       });
       expect(verifyResult.Ok.AlreadyVerified).toBeTruthy();
     });
-    it.skip("should allow a seller to refund a paid invoice", async () => {});
   });
   /**
    * Transfer Tests
