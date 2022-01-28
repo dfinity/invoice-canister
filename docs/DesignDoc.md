@@ -34,8 +34,8 @@ type VerifyInvoiceSuccess =
  };
 type VerifyInvoiceResult = 
  variant {
-   Err: VerifyInvoiceErr;
-   Ok: VerifyInvoiceSuccess;
+   err: VerifyInvoiceErr;
+   ok: VerifyInvoiceSuccess;
  };
 type VerifyInvoiceErr = 
  record {
@@ -54,8 +54,8 @@ type VerifyInvoiceArgs = record {id: nat;};
 type TransferSuccess = record {blockHeight: nat64;};
 type TransferResult = 
  variant {
-   Err: TransferError;
-   Ok: TransferSuccess;
+   err: TransferError;
+   ok: TransferSuccess;
  };
 type TransferError = 
  record {
@@ -86,8 +86,8 @@ type Time = int;
 type RefundInvoiceSuccess = record {blockHeight: nat64;};
 type RefundInvoiceResult = 
  variant {
-   Err: RefundInvoiceErr;
-   Ok: RefundInvoiceSuccess;
+   err: RefundInvoiceErr;
+   ok: RefundInvoiceSuccess;
  };
 type RefundInvoiceErr = 
  record {
@@ -131,8 +131,8 @@ type Invoice =
 type GetInvoiceSuccess = record {invoice: Invoice;};
 type GetInvoiceResult = 
  variant {
-   Err: GetInvoiceErr;
-   Ok: GetInvoiceSuccess;
+   err: GetInvoiceErr;
+   ok: GetInvoiceSuccess;
  };
 type GetInvoiceErr = 
  record {
@@ -147,8 +147,8 @@ type GetCallerIdentifierSuccess = record {
                                     accountIdentifier: AccountIdentifier;};
 type GetCallerIdentifierResult = 
  variant {
-   Err: GetCallerIdentifierErr;
-   Ok: GetCallerIdentifierSuccess;
+   err: GetCallerIdentifierErr;
+   ok: GetCallerIdentifierSuccess;
  };
 type GetCallerIdentifierErr = 
  record {
@@ -159,8 +159,8 @@ type GetCallerIdentifierArgs = record {token: Token;};
 type GetBalanceSuccess = record {balance: nat;};
 type GetBalanceResult = 
  variant {
-   Err: GetBalanceErr;
-   Ok: GetBalanceSuccess;
+   err: GetBalanceErr;
+   ok: GetBalanceSuccess;
  };
 type GetBalanceErr = 
  record {
@@ -179,8 +179,8 @@ type Details =
 type CreateInvoiceSuccess = record {invoice: Invoice;};
 type CreateInvoiceResult = 
  variant {
-   Err: CreateInvoiceErr;
-   Ok: CreateInvoiceSuccess;
+   err: CreateInvoiceErr;
+   ok: CreateInvoiceSuccess;
  };
 type CreateInvoiceErr = 
  record {

@@ -1,7 +1,7 @@
 import Time "mo:base/Time";
+import Result "mo:base/Result";
 
 module {
-
 /**
 * Base Types
 */
@@ -52,10 +52,7 @@ module {
     token: Token;
     details: ?Details;
   };
-  public type CreateInvoiceResult = {
-    #Ok: CreateInvoiceSuccess;
-    #Err: CreateInvoiceErr;
-  };
+  public type CreateInvoiceResult = Result.Result<CreateInvoiceSuccess, CreateInvoiceErr>;
   public type CreateInvoiceSuccess = {
     invoice: Invoice;
   };
@@ -66,6 +63,7 @@ module {
       #InvalidAmount;
       #InvalidDestination;
       #InvalidDetails;
+      #Other;
     };
   };
 // #endregion
@@ -76,10 +74,7 @@ module {
     caller : Principal;
     invoiceId : Nat;
   };
-  public type GetDestinationAccountIdentifierResult = {
-    #Ok: GetDestinationAccountIdentifierSuccess;
-    #Err: GetDestinationAccountIdentifierErr;
-  };
+  public type GetDestinationAccountIdentifierResult = Result.Result<GetDestinationAccountIdentifierSuccess, GetDestinationAccountIdentifierErr>;
   public type GetDestinationAccountIdentifierSuccess = {
     accountIdentifier: AccountIdentifier;
   };
@@ -88,6 +83,7 @@ module {
     kind: {
         #InvalidToken;
         #InvalidInvoiceId;
+        #Other;
     };
   };
 // #endregion
@@ -96,10 +92,7 @@ module {
   public type GetInvoiceArgs = {
     id: Nat;
   };
-  public type GetInvoiceResult = {
-    #Ok: GetInvoiceSuccess;
-    #Err: GetInvoiceErr;
-  };
+  public type GetInvoiceResult = Result.Result<GetInvoiceSuccess, GetInvoiceErr>;
   public type GetInvoiceSuccess = {
     invoice: Invoice;
   };
@@ -108,6 +101,7 @@ module {
     kind: {
       #InvalidInvoiceId;
       #NotFound;
+      #Other;
     };
   };
 // #endregion
@@ -116,10 +110,7 @@ module {
   public type GetBalanceArgs = {
     token: Token;
   };
-  public type GetBalanceResult = {
-    #Ok: GetBalanceSuccess;
-    #Err: GetBalanceErr;
-  };
+  public type GetBalanceResult = Result.Result<GetBalanceSuccess, GetBalanceErr>;
   public type GetBalanceSuccess = {
     balance: Nat;
   };
@@ -128,6 +119,7 @@ module {
     kind: {
       #InvalidToken;
       #NotFound;
+      #Other;
     };
   };
 // #endregion
@@ -136,10 +128,7 @@ module {
   public type VerifyInvoiceArgs = {
     id: Nat;
   };
-  public type VerifyInvoiceResult = {
-    #Ok: VerifyInvoiceSuccess;
-    #Err: VerifyInvoiceErr;
-  };
+  public type VerifyInvoiceResult = Result.Result<VerifyInvoiceSuccess, VerifyInvoiceErr>;
   public type VerifyInvoiceSuccess = {
     #Paid: {
       invoice: Invoice;
@@ -157,6 +146,8 @@ module {
       #Expired;
       #TransferError;
       #InvalidToken;
+      #InvalidAccount;
+      #Other;
     };
   };
 // #endregion
@@ -167,10 +158,7 @@ module {
     token: Token;
     destination: AccountIdentifier;
   };
-  public type TransferResult = {
-    #Ok: TransferSuccess;
-    #Err: TransferError;
-  };
+  public type TransferResult = Result.Result<TransferSuccess, TransferError>;
   public type TransferSuccess = {
     blockHeight: Nat64;
   };
@@ -190,10 +178,7 @@ module {
   public type GetCallerIdentifierArgs = {
     token : Token;
   };
-  public type GetCallerIdentifierResult = {
-    #Ok: GetCallerIdentifierSuccess;
-    #Err: GetCallerIdentifierErr;
-  };
+  public type GetCallerIdentifierResult = Result.Result<GetCallerIdentifierSuccess, GetCallerIdentifierErr>;
   public type GetCallerIdentifierSuccess = {
     accountIdentifier: AccountIdentifier;
   };
@@ -201,6 +186,7 @@ module {
     message: ?Text; 
     kind: {
       #InvalidToken;
+      #Other;
     };
   };
 // #endregion
@@ -211,10 +197,7 @@ module {
     refundAccount: AccountIdentifier;
     amount: Nat;
   };
-  public type RefundInvoiceResult = {
-    #Ok: RefundInvoiceSuccess;
-    #Err: RefundInvoiceErr;
-  };
+  public type RefundInvoiceResult = Result.Result<RefundInvoiceSuccess, RefundInvoiceErr>;
   public type RefundInvoiceSuccess = {
     blockHeight: Nat64;
   };

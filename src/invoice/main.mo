@@ -13,7 +13,7 @@ import Blob "mo:base/Blob";
 import Buffer "mo:base/Buffer";
 import Cycles "mo:base/ExperimentalCycles";
 import Debug "mo:base/Debug";
-import Error "mo:base/Error";
+import error "mo:base/error";
 import Hash "mo:base/Hash";
 import HashMap "mo:base/HashMap";
 import Int "mo:base/Int";
@@ -63,13 +63,13 @@ actor Invoice {
     });
 
     switch(destinationResult){
-      case (#Err result) {
-        return #Err({
+      case (#err result) {
+        return #err({
           message = ?"Invalid destination account identifier";
           kind = #InvalidDestination;
         });
       };
-      case (#Ok result) {
+      case (#ok result) {
         let destination : AccountIdentifier = result.accountIdentifier;
         let token = getTokenVerbose(args.token);
 
@@ -92,7 +92,7 @@ actor Invoice {
     
         invoices.put(id, invoice);
 
-        return #Ok({invoice});
+        return #ok({invoice});
       };
     };
   };
@@ -137,10 +137,10 @@ actor Invoice {
         });
         let hexEncoded = Hex.encode(Blob.toArray(account));
         let result: AccountIdentifier = #text(hexEncoded);
-        return #Ok({accountIdentifier = result});
+        return #ok({accountIdentifier = result});
       };
       case(_){
-        return #Err({
+        return #err({
           message = ?"This token is not yet supported. Currently, this canister supports ICP.";
           kind = #InvalidToken;
         });
@@ -155,13 +155,13 @@ actor Invoice {
     let invoice = invoices.get(args.id);
     switch(invoice){
       case(null){
-        return #Err({
+        return #err({
           message = ?"Invoice not found";
           kind = #NotFound;
         });
       };
       case(? i){
-        return #Ok({invoice = i});
+        return #ok({invoice = i});
       };
     };
   };
@@ -176,19 +176,19 @@ actor Invoice {
         let defaultAccount = Hex.encode(Blob.toArray(ICP.getDefaultAccount({caller; canisterId})));
         let balance = await ICP.balance({account = defaultAccount});
         switch(balance){
-          case(#Err err){
-            return #Err({
+          case(#err err){
+            return #err({
               message = ?"Could not get balance";
               kind = #NotFound;
             });
           };
-          case(#Ok result){
-            return #Ok({balance = result.balance});
+          case(#ok result){
+            return #ok({balance = result.balance});
           };
         };
       };
       case(_){
-        return #Err({
+        return #err({
           message = ?"This token is not yet supported. Currently, this canister supports ICP.";
           kind = #InvalidToken;
         });
@@ -204,7 +204,7 @@ actor Invoice {
 
     switch(invoice){
       case(null){
-        return #Err({
+        return #err({
           message = ?"Invoice not found";
           kind = #NotFound;
         });
@@ -212,7 +212,7 @@ actor Invoice {
       case(? i){
         // Return if already verified
         if (i.verifiedAtTime != null){
-          return #Ok(#AlreadyVerified{
+          return #ok(#AlreadyVerified{
             invoice = i;
           });
         };
@@ -225,7 +225,7 @@ actor Invoice {
               canisterId;
             });
             switch (result){
-              case(#Ok value){
+              case(#ok value){
                 switch (value){
                   case(#AlreadyVerified _){};
                   case(#Paid paidResult){
@@ -233,12 +233,12 @@ actor Invoice {
                   };
                 };
               };
-              case(#Err _){};
+              case(#err _){};
             };
             return result;
           };
           case(_){
-            return #Err({
+            return #err({
               message = ?"This token is not yet supported. Currently, this canister supports ICP.";
               kind = #InvalidToken;
             });
@@ -256,13 +256,13 @@ actor Invoice {
 
       let validated = A.validateAccountIdentifier(destination);
       if(validated == false){
-        return #Err({
+        return #err({
           message = ?"Invalid destination account identifier for ICP";
           kind = #InvalidDestination;
         });
       };
     } catch (e) {
-      return #Err({
+      return #err({
         message = ?"Invalid destination account identifier for ICP";
         kind = #InvalidDestination;
       });
@@ -270,7 +270,7 @@ actor Invoice {
     let invoice = invoices.get(args.id);
     switch (invoice){
       case(null){
-        return #Err({
+        return #err({
           message = ?"Invoice not found";
           kind = #NotFound;
         });
@@ -278,7 +278,7 @@ actor Invoice {
       case(? i){
         // Return if already refunded
         if (i.refundedAtTime != null){
-          return #Err({
+          return #err({
             message = ?"Invoice already refunded";
             kind = #AlreadyRefunded;
           });
@@ -300,7 +300,7 @@ actor Invoice {
           created_at_time = null;
         });
         switch (transferResult) {
-          case (#Ok result) {
+          case (#ok result) {
             let updatedInvoice = {
               id = i.id;
               creator = i.creator;
@@ -317,25 +317,25 @@ actor Invoice {
               refundAccount = ?destination;
             };
             let replaced = invoices.put(i.id, updatedInvoice);
-            return #Ok({blockHeight = result});
+            return #ok(result);
           };
-          case (#Err err) {
-            switch (err){
+          case (#err err) {
+            switch (err.kind){
               case (#BadFee f){
-                return #Err({
-                  message = ?"Bad fee";
+                return #err({
+                  message = err.message;
                   kind = #BadFee;
                 });
               };
               case (#InsufficientFunds f){
-                return #Err({
-                  message = ?"Insufficient funds";
+                return #err({
+                  message = err.message;
                   kind = #InsufficientFunds;
                 });
               };
               case (_){
-                return #Err({
-                  message = ?"Could not transfer funds to invoice creator.";
+                return #err({
+                  message = err.message;
                   kind = #Other;
                 });
               }
@@ -358,13 +358,13 @@ actor Invoice {
 
           let validated = A.validateAccountIdentifier(destination);
           if(validated == false){
-            return #Err({
+            return #err({
               message = ?"Invalid destination account identifier for ICP";
               kind = #InvalidDestination;
             });
           };
         } catch (e) {
-          return #Err({
+          return #err({
             message = ?"Invalid destination account identifier for ICP";
             kind = #InvalidDestination;
           });
@@ -385,26 +385,26 @@ actor Invoice {
           created_at_time = null;
         });
         switch (transferResult) {
-          case (#Ok result) {
-            return #Ok({blockHeight = result});
+          case (#ok result) {
+            return #ok(result);
           };
-          case (#Err err) {
-            switch (err){
-              case (#BadFee f){
-                return #Err({
-                  message = ?"Bad fee";
+          case (#err err) {
+            switch (err.kind){
+              case (#BadFee _){
+                return #err({
+                  message = err.message;
                   kind = #BadFee;
                 });
               };
-              case (#InsufficientFunds f){
-                return #Err({
-                  message = ?"Insufficient funds";
+              case (#InsufficientFunds _){
+                return #err({
+                  message = err.message;
                   kind = #InsufficientFunds;
                 });
               };
               case (_){
-                return #Err({
-                  message = ?"Could not transfer funds to invoice creator.";
+                return #err({
+                  message = err.message;
                   kind = #Other;
                 });
               }
@@ -413,7 +413,7 @@ actor Invoice {
         };
       };
       case(_){
-        return #Err({
+        return #err({
           message = ?"Token not supported";
           kind = #InvalidToken;
         });
@@ -438,10 +438,10 @@ actor Invoice {
           Blob.toArray(subaccount)
         );
         let result: AccountIdentifier = #text(hexEncoded);
-        return #Ok({accountIdentifier = result});
+        return #ok({accountIdentifier = result});
       };
       case(_){
-        return #Err({
+        return #err({
           message = ?"This token is not yet supported. Currently, this canister supports ICP.";
           kind = #InvalidToken;
         });

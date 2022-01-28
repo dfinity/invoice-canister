@@ -47,34 +47,39 @@ export const idlFactory = ({ IDL }) => {
       'InvalidAmount' : IDL.Null,
       'InvalidDestination' : IDL.Null,
       'InvalidToken' : IDL.Null,
+      'Other' : IDL.Null,
     }),
     'message' : IDL.Opt(IDL.Text),
   });
   const CreateInvoiceResult = IDL.Variant({
-    'Ok' : CreateInvoiceSuccess,
-    'Err' : CreateInvoiceErr,
+    'ok' : CreateInvoiceSuccess,
+    'err' : CreateInvoiceErr,
   });
   const GetBalanceArgs = IDL.Record({ 'token' : Token });
   const GetBalanceSuccess = IDL.Record({ 'balance' : IDL.Nat });
   const GetBalanceErr = IDL.Record({
-    'kind' : IDL.Variant({ 'NotFound' : IDL.Null, 'InvalidToken' : IDL.Null }),
+    'kind' : IDL.Variant({
+      'NotFound' : IDL.Null,
+      'InvalidToken' : IDL.Null,
+      'Other' : IDL.Null,
+    }),
     'message' : IDL.Opt(IDL.Text),
   });
   const GetBalanceResult = IDL.Variant({
-    'Ok' : GetBalanceSuccess,
-    'Err' : GetBalanceErr,
+    'ok' : GetBalanceSuccess,
+    'err' : GetBalanceErr,
   });
   const GetCallerIdentifierArgs = IDL.Record({ 'token' : Token });
   const GetCallerIdentifierSuccess = IDL.Record({
     'accountIdentifier' : AccountIdentifier,
   });
   const GetCallerIdentifierErr = IDL.Record({
-    'kind' : IDL.Variant({ 'InvalidToken' : IDL.Null }),
+    'kind' : IDL.Variant({ 'InvalidToken' : IDL.Null, 'Other' : IDL.Null }),
     'message' : IDL.Opt(IDL.Text),
   });
   const GetCallerIdentifierResult = IDL.Variant({
-    'Ok' : GetCallerIdentifierSuccess,
-    'Err' : GetCallerIdentifierErr,
+    'ok' : GetCallerIdentifierSuccess,
+    'err' : GetCallerIdentifierErr,
   });
   const GetInvoiceArgs = IDL.Record({ 'id' : IDL.Nat });
   const GetInvoiceSuccess = IDL.Record({ 'invoice' : Invoice });
@@ -82,12 +87,13 @@ export const idlFactory = ({ IDL }) => {
     'kind' : IDL.Variant({
       'NotFound' : IDL.Null,
       'InvalidInvoiceId' : IDL.Null,
+      'Other' : IDL.Null,
     }),
     'message' : IDL.Opt(IDL.Text),
   });
   const GetInvoiceResult = IDL.Variant({
-    'Ok' : GetInvoiceSuccess,
-    'Err' : GetInvoiceErr,
+    'ok' : GetInvoiceSuccess,
+    'err' : GetInvoiceErr,
   });
   const RefundInvoiceArgs = IDL.Record({
     'id' : IDL.Nat,
@@ -111,8 +117,8 @@ export const idlFactory = ({ IDL }) => {
     'message' : IDL.Opt(IDL.Text),
   });
   const RefundInvoiceResult = IDL.Variant({
-    'Ok' : RefundInvoiceSuccess,
-    'Err' : RefundInvoiceErr,
+    'ok' : RefundInvoiceSuccess,
+    'err' : RefundInvoiceErr,
   });
   const TransferArgs = IDL.Record({
     'destination' : AccountIdentifier,
@@ -131,8 +137,8 @@ export const idlFactory = ({ IDL }) => {
     'message' : IDL.Opt(IDL.Text),
   });
   const TransferResult = IDL.Variant({
-    'Ok' : TransferSuccess,
-    'Err' : TransferError,
+    'ok' : TransferSuccess,
+    'err' : TransferError,
   });
   const VerifyInvoiceArgs = IDL.Record({ 'id' : IDL.Nat });
   const VerifyInvoiceSuccess = IDL.Variant({
@@ -141,18 +147,20 @@ export const idlFactory = ({ IDL }) => {
   });
   const VerifyInvoiceErr = IDL.Record({
     'kind' : IDL.Variant({
+      'InvalidAccount' : IDL.Null,
       'TransferError' : IDL.Null,
       'NotFound' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'InvalidInvoiceId' : IDL.Null,
+      'Other' : IDL.Null,
       'NotYetPaid' : IDL.Null,
       'Expired' : IDL.Null,
     }),
     'message' : IDL.Opt(IDL.Text),
   });
   const VerifyInvoiceResult = IDL.Variant({
-    'Ok' : VerifyInvoiceSuccess,
-    'Err' : VerifyInvoiceErr,
+    'ok' : VerifyInvoiceSuccess,
+    'err' : VerifyInvoiceErr,
   });
   return IDL.Service({
     'accountIdentifierToBlob' : IDL.Func(

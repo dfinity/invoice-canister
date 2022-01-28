@@ -5,18 +5,20 @@ type VerifyInvoiceSuccess =
  };
 type VerifyInvoiceResult = 
  variant {
-   Err: VerifyInvoiceErr;
-   Ok: VerifyInvoiceSuccess;
+   err: VerifyInvoiceErr;
+   ok: VerifyInvoiceSuccess;
  };
 type VerifyInvoiceErr = 
  record {
    kind:
     variant {
       Expired;
+      InvalidAccount;
       InvalidInvoiceId;
       InvalidToken;
       NotFound;
       NotYetPaid;
+      Other;
       TransferError;
     };
    message: opt text;
@@ -25,8 +27,8 @@ type VerifyInvoiceArgs = record {id: nat;};
 type TransferSuccess = record {blockHeight: nat64;};
 type TransferResult = 
  variant {
-   Err: TransferError;
-   Ok: TransferSuccess;
+   err: TransferError;
+   ok: TransferSuccess;
  };
 type TransferError = 
  record {
@@ -57,8 +59,8 @@ type Time = int;
 type RefundInvoiceSuccess = record {blockHeight: nat64;};
 type RefundInvoiceResult = 
  variant {
-   Err: RefundInvoiceErr;
-   Ok: RefundInvoiceSuccess;
+   err: RefundInvoiceErr;
+   ok: RefundInvoiceSuccess;
  };
 type RefundInvoiceErr = 
  record {
@@ -102,14 +104,15 @@ type Invoice =
 type GetInvoiceSuccess = record {invoice: Invoice;};
 type GetInvoiceResult = 
  variant {
-   Err: GetInvoiceErr;
-   Ok: GetInvoiceSuccess;
+   err: GetInvoiceErr;
+   ok: GetInvoiceSuccess;
  };
 type GetInvoiceErr = 
  record {
    kind: variant {
            InvalidInvoiceId;
            NotFound;
+           Other;
          };
    message: opt text;
  };
@@ -118,26 +121,30 @@ type GetCallerIdentifierSuccess = record {
                                     accountIdentifier: AccountIdentifier;};
 type GetCallerIdentifierResult = 
  variant {
-   Err: GetCallerIdentifierErr;
-   Ok: GetCallerIdentifierSuccess;
+   err: GetCallerIdentifierErr;
+   ok: GetCallerIdentifierSuccess;
  };
 type GetCallerIdentifierErr = 
  record {
-   kind: variant {InvalidToken;};
+   kind: variant {
+           InvalidToken;
+           Other;
+         };
    message: opt text;
  };
 type GetCallerIdentifierArgs = record {token: Token;};
 type GetBalanceSuccess = record {balance: nat;};
 type GetBalanceResult = 
  variant {
-   Err: GetBalanceErr;
-   Ok: GetBalanceSuccess;
+   err: GetBalanceErr;
+   ok: GetBalanceSuccess;
  };
 type GetBalanceErr = 
  record {
    kind: variant {
            InvalidToken;
            NotFound;
+           Other;
          };
    message: opt text;
  };
@@ -150,8 +157,8 @@ type Details =
 type CreateInvoiceSuccess = record {invoice: Invoice;};
 type CreateInvoiceResult = 
  variant {
-   Err: CreateInvoiceErr;
-   Ok: CreateInvoiceSuccess;
+   err: CreateInvoiceErr;
+   ok: CreateInvoiceSuccess;
  };
 type CreateInvoiceErr = 
  record {
@@ -161,6 +168,7 @@ type CreateInvoiceErr =
       InvalidDestination;
       InvalidDetails;
       InvalidToken;
+      Other;
     };
    message: opt text;
  };

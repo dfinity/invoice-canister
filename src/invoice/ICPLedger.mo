@@ -12,6 +12,8 @@ import Blob "mo:base/Blob";
 import Buffer "mo:base/Buffer";
 import Nat "mo:base/Nat";
 import Debug "mo:base/Debug";
+import Result "mo:base/Result";
+import Option "mo:base/Option";
 import Time "mo:base/Time";
 import Text "mo:base/Text";
 
@@ -33,19 +35,23 @@ module {
   public type BlockIndex = Nat64;
 
   public type TransferError = {
-    #BadFee: {
-      expected_fee: Tokens;
-    };
-    #InsufficientFunds: {
-      balance: Tokens;
-    };
-    #TxTooOld: {
-      allowed_window_nanos: Nat64;
-    };
-    #TxCreatedInFuture;
-    #TxDuplicate : {
-      duplicate_of: BlockIndex;
-    };
+    message: ?Text;
+    kind : {
+      #BadFee: {
+        expected_fee: Tokens;
+      };
+      #InsufficientFunds: {
+        balance: Tokens;
+      };
+      #TxTooOld: {
+        allowed_window_nanos: Nat64;
+      };
+      #TxCreatedInFuture;
+      #TxDuplicate : {
+        duplicate_of: BlockIndex;
+      };
+      #Other;
+    }
   };
 
   public type TransferArgs = {
@@ -57,10 +63,7 @@ module {
     created_at_time: ?TimeStamp;
   };
 
-  public type TransferResult = {
-    #Ok: BlockIndex;
-    #Err: TransferError;
-  };
+  public type TransferResult = Result.Result<T.TransferSuccess, TransferError>;
 
   public func transfer (args: TransferArgs) : async TransferResult {
     let result = await Ledger.transfer({
@@ -73,53 +76,78 @@ module {
     });
     switch (result){
       case (#Ok index){
-        Debug.print(Nat64.toText(index));
+        return #ok({blockHeight = index});
       };
       case (#Err err){
         switch(err){
-          case (#BadFee expected_fee){
-            Debug.print("BadFee");
+          case (#BadFee kind){
+            let expected_fee = kind.expected_fee;
+            return #err({
+              message = Option.make("Bad Fee. Expected fee of " # Nat64.toText(expected_fee.e8s) # " but got " # Nat64.toText(args.fee.e8s));
+              kind = #BadFee({expected_fee});
+            });
           };
-          case (#InsufficientFunds balance){
-            Debug.print("InsufficientFunds");
+          case (#InsufficientFunds kind){
+            let balance = kind.balance;
+            return #err({
+              message = Option.make("Insufficient balance. Current balance is " # Nat64.toText(balance.e8s));
+              kind = #InsufficientFunds({balance});
+            })
           };
-          case (#TxTooOld allowed_window_nanos){
-            Debug.print("TxTooOld");
+          case (#TxTooOld kind){
+            let allowed_window_nanos = kind.allowed_window_nanos;
+            return #err({
+              message = Option.make("Error - Tx Too Old. Allowed window of " # Nat64.toText(allowed_window_nanos));
+              kind = #TxTooOld({allowed_window_nanos});
+            })
           };
           case (#TxCreatedInFuture){
-            Debug.print("TxCreatedInFuture");
+            return #err({
+              message = ?"Error - Tx Created In Future";
+              kind = #TxCreatedInFuture;
+            })
           };
-          case (#TxDuplicate duplicate_of){
-            Debug.print("TxDuplicate");
+          case (#TxDuplicate kind){
+            let duplicate_of = kind.duplicate_of;
+            return #err({
+              message = Option.make("Error - Duplicate transaction. Duplicate of " # Nat64.toText(duplicate_of));
+              kind = #TxDuplicate({duplicate_of});
+            })
           };
         };
       };
     };
-    return result;
   };
 
   type AccountArgs = {
     // Hex-encoded AccountIdentifier
     account : Text;
   };
-  type BalanceResult = {
-    #Ok: {
-      balance: Nat;
-    };
-    #Err: {
-      error: Text;
+  type BalanceResult = Result.Result<BalanceSuccess, BalanceError>;
+
+  type BalanceSuccess = {
+    balance: Nat;
+  };
+  type BalanceError = {
+    message: ?Text; 
+    kind: {
+      #InvalidToken;
+      #InvalidAccount;
+      #NotFound;
+      #Other;
     };
   };
   public func balance(args: AccountArgs) : async BalanceResult {
     switch (Hex.decode(args.account)){
       case (#err err){
-        #Err({
-          error = "Invalid account";
+        #err({
+          kind = #InvalidAccount;
+          message = ?"Invalid account";
         });
       };
       case (#ok account) {
         let balance = await Ledger.account_balance({account = Blob.fromArray(account)});
-        #Ok({
+        #ok({
           balance = Nat64.toNat(balance.e8s);
         });
       };
@@ -154,13 +182,10 @@ module {
     let balanceResult = await balance({account = destination});
 
     switch(balanceResult){
-      case(#Err err){
-        #Err({
-          message = ?"Could not get balance";
-          kind = #NotFound;
-        });
+      case(#err err){
+        #err(err);
       };
-      case(#Ok b){
+      case(#ok b){
         let balance = b.balance;
         // If balance is less than invoice amount, return error
         if(balance < i.amount){
@@ -182,7 +207,7 @@ module {
             };
           };
 
-          return #Err({
+          return #err({
             message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
             kind = #NotYetPaid;
           });
@@ -226,27 +251,27 @@ module {
           created_at_time = null;
         });
         switch (transferResult) {
-          case (#Ok result) {
-            return #Ok(#Paid {
+          case (#ok result) {
+            return #ok(#Paid {
               invoice = verifiedInvoice;
             });
           };
-          case (#Err err) {
-            switch (err) {
+          case (#err err) {
+            switch (err.kind) {
               case (#BadFee f) {
-                return #Err({
+                return #err({
                   message = ?"Bad fee";
                   kind = #TransferError;
                 });
               };
               case (#InsufficientFunds f) {
-                return #Err({
+                return #err({
                   message = ?"Insufficient funds";
                   kind = #TransferError;
                 });
               };
               case (_) {
-                return #Err({
+                return #err({
                   message = ?"Could not transfer funds to invoice creator.";
                   kind = #TransferError;
                 });

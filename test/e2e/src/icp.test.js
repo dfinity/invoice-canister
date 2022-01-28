@@ -34,8 +34,8 @@ const resetBalance = async () => {
       symbol: "ICP",
     },
   });
-  if ("Ok" in balance) {
-    let amount = balance.Ok.balance;
+  if ("ok" in balance) {
+    let amount = balance.ok.balance;
     if (amount > 0n) {
       // Transfer full balance back to the balance holder
       let result = await defaultActor.transfer({
@@ -71,7 +71,7 @@ describe("ICP Tests", () => {
           symbol: "ICP",
         },
       });
-      expect(balanceResult).toStrictEqual({ Ok: { balance: 0n } });
+      expect(balanceResult).toStrictEqual({ ok: { balance: 0n } });
     });
     it("should fetch the account of the caller", async () => {
       let identifier = await defaultActor.get_caller_identifier({
@@ -79,13 +79,13 @@ describe("ICP Tests", () => {
           symbol: "ICP",
         },
       });
-      if ("Ok" in identifier) {
-        expect(identifier.Ok.accountIdentifier).toStrictEqual({
+      if ("ok" in identifier) {
+        expect(identifier.ok.accountIdentifier).toStrictEqual({
           // prettier-ignore
           "text": "f834bd307422e47225d915888092810b3eae9daea5e54b67dfc99799698f8eea",
         });
       } else {
-        throw new Error("identifier.Err.message");
+        throw new Error(identifier.err.message);
       }
     });
   });
@@ -94,34 +94,34 @@ describe("ICP Tests", () => {
    */
   describe("Invoice Tests", () => {
     it("should create an invoice", async () => {
-      if ("Ok" in createResult) {
+      if ("ok" in createResult) {
         // Test invoice exists
-        expect(createResult.Ok.invoice).toBeTruthy();
+        expect(createResult.ok.invoice).toBeTruthy();
 
         // Test decoding invoice details
-        let metaBlob = Uint8Array.from(createResult.Ok.invoice.details[0].meta);
+        let metaBlob = Uint8Array.from(createResult.ok.invoice.details[0].meta);
         let decodedMeta = JSON.parse(String.fromCharCode(...metaBlob));
         expect(decodedMeta).toStrictEqual(testMeta);
       } else {
-        throw new Error(createResult.Err.message);
+        throw new Error(createResult.err.message);
       }
     });
     it("should allow for querying an invoice by ID", async () => {
       const invoice = await defaultActor.get_invoice({
-        id: createResult.Ok.invoice.id,
+        id: createResult.ok.invoice.id,
       });
-      if ("Ok" in invoice) {
-        expect(invoice.Ok.invoice).toStrictEqual(createResult.Ok.invoice);
+      if ("ok" in invoice) {
+        expect(invoice.ok.invoice).toStrictEqual(createResult.ok.invoice);
       } else {
-        throw new Error(invoice.Err.message);
+        throw new Error(invoice.err.message);
       }
     });
     it("should not mark a payment verified if the balance has not been paid", async () => {
       let verifyResult = await defaultActor.verify_invoice({
-        id: createResult.Ok.invoice.id,
+        id: createResult.ok.invoice.id,
       });
       expect(verifyResult).toStrictEqual({
-        Err: {
+        err: {
           kind: { NotYetPaid: null },
           message: ["Insufficient balance. Current Balance is 0"],
         },
@@ -130,71 +130,71 @@ describe("ICP Tests", () => {
     it("should a payment verified if the balance has been paid", async () => {
       // Transfer balance to the balance holder
       await balanceHolder.transfer({
-        amount: createResult.Ok.invoice.amount + FEE,
+        amount: createResult.ok.invoice.amount + FEE,
         token: {
           symbol: "ICP",
         },
-        destination: createResult.Ok?.invoice?.destination,
+        destination: createResult.ok?.invoice?.destination,
       });
 
       // Verify the invoice
       let verifyResult = await defaultActor.verify_invoice({
-        id: createResult.Ok.invoice.id,
+        id: createResult.ok.invoice.id,
       });
-      expect(verifyResult.Ok?.Paid?.invoice?.paid).toBe(true);
+      expect(verifyResult.ok?.Paid?.invoice?.paid).toBe(true);
     });
   });
   describe("Refund Tests", () => {
     it("should handle a full flow, with a refund", async () => {
       const newInvoice = await defaultActor.create_invoice(testInvoice);
       await balanceHolder.transfer({
-        amount: newInvoice.Ok.invoice.amount + FEE,
+        amount: newInvoice.ok.invoice.amount + FEE,
         token: {
           symbol: "ICP",
         },
-        destination: newInvoice.Ok?.invoice?.destination,
+        destination: newInvoice.ok?.invoice?.destination,
       });
       const verification = await defaultActor.verify_invoice({
-        id: newInvoice.Ok.invoice.id,
+        id: newInvoice.ok.invoice.id,
       });
-      expect(verification.Ok?.Paid?.invoice?.paid).toBe(true);
+      expect(verification.ok?.Paid?.invoice?.paid).toBe(true);
 
       const refund = await defaultActor.refund_invoice({
-        id: newInvoice.Ok.invoice.id,
+        id: newInvoice.ok.invoice.id,
         // refunding the full amount minus the fee
-        amount: newInvoice.Ok.invoice.amount - FEE,
+        amount: newInvoice.ok.invoice.amount - FEE,
         refundAccount: {
           text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b".toUpperCase(),
         },
       });
-      expect(refund.Ok).toBeTruthy();
+      expect(refund.ok).toBeTruthy();
     });
     it("should handle refund errors successfully", async () => {
       const newInvoice = await defaultActor.create_invoice(testInvoice);
       await balanceHolder.transfer({
-        amount: newInvoice.Ok.invoice.amount + FEE,
+        amount: newInvoice.ok.invoice.amount + FEE,
         token: {
           symbol: "ICP",
         },
-        destination: newInvoice.Ok?.invoice?.destination,
+        destination: newInvoice.ok?.invoice?.destination,
       });
       const verification = await defaultActor.verify_invoice({
-        id: newInvoice.Ok.invoice.id,
+        id: newInvoice.ok.invoice.id,
       });
-      expect(verification.Ok?.Paid?.invoice?.paid).toBe(true);
+      expect(verification.ok?.Paid?.invoice?.paid).toBe(true);
 
       const refund = await defaultActor.refund_invoice({
-        id: newInvoice.Ok.invoice.id,
+        id: newInvoice.ok.invoice.id,
         // The balance will be {FEE} less than the amount at this point
-        amount: newInvoice.Ok.invoice.amount,
+        amount: newInvoice.ok.invoice.amount,
         refundAccount: {
           text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
         },
       });
       expect(refund).toStrictEqual({
-        Err: {
+        err: {
           kind: { InsufficientFunds: null },
-          message: ["Insufficient funds"],
+          message: ["Insufficient balance. Current balance is 990000"],
         },
       });
     });
@@ -202,9 +202,9 @@ describe("ICP Tests", () => {
   describe("already completed Invoice", () => {
     it("should return AlreadyVerified if an invoice has already been verified", async () => {
       let verifyResult = await defaultActor.verify_invoice({
-        id: createResult.Ok.invoice.id,
+        id: createResult.ok.invoice.id,
       });
-      expect(verifyResult.Ok.AlreadyVerified).toBeTruthy();
+      expect(verifyResult.ok.AlreadyVerified).toBeTruthy();
     });
   });
   /**
@@ -221,15 +221,15 @@ describe("ICP Tests", () => {
         token: {
           symbol: "ICP",
         },
-        destination: destination.Ok.accountIdentifier,
+        destination: destination.ok.accountIdentifier,
       });
-      if ("Ok" in transferResult) {
+      if ("ok" in transferResult) {
         let newBalance = await defaultActor.get_balance({
           token: {
             symbol: "ICP",
           },
         });
-        expect(newBalance).toStrictEqual({ Ok: { balance: 1000000n - FEE } });
+        expect(newBalance).toStrictEqual({ ok: { balance: 1000000n - FEE } });
       }
     });
     it("should not allow a caller to transfer to an invalid account", async () => {
@@ -243,7 +243,7 @@ describe("ICP Tests", () => {
         },
       });
       expect(transferResult).toStrictEqual({
-        Err: {
+        err: {
           kind: { InvalidDestination: null },
           message: ["Invalid destination account identifier for ICP"],
         },
@@ -259,7 +259,7 @@ describe("ICP Tests", () => {
           text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
         },
       });
-      expect(transferResult.Err).toBeTruthy();
+      expect(transferResult.err).toBeTruthy();
     });
   });
 });
