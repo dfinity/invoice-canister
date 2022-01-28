@@ -42,10 +42,12 @@ type VerifyInvoiceErr =
    kind:
     variant {
       Expired;
+      InvalidAccount;
       InvalidInvoiceId;
       InvalidToken;
       NotFound;
       NotYetPaid;
+      Other;
       TransferError;
     };
    message: opt text;
@@ -139,6 +141,7 @@ type GetInvoiceErr =
    kind: variant {
            InvalidInvoiceId;
            NotFound;
+           Other;
          };
    message: opt text;
  };
@@ -152,7 +155,10 @@ type GetCallerIdentifierResult =
  };
 type GetCallerIdentifierErr = 
  record {
-   kind: variant {InvalidToken;};
+   kind: variant {
+           InvalidToken;
+           Other;
+         };
    message: opt text;
  };
 type GetCallerIdentifierArgs = record {token: Token;};
@@ -167,6 +173,7 @@ type GetBalanceErr =
    kind: variant {
            InvalidToken;
            NotFound;
+           Other;
          };
    message: opt text;
  };
@@ -190,6 +197,7 @@ type CreateInvoiceErr =
       InvalidDestination;
       InvalidDetails;
       InvalidToken;
+      Other;
     };
    message: opt text;
  };
