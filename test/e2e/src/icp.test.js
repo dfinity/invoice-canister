@@ -1,5 +1,5 @@
 const identityUtils = require("./utils/identity");
-const { defaultActor, balanceHolder, recipient } = identityUtils;
+const { defaultActor, balanceHolder } = identityUtils;
 
 const encoder = new TextEncoder();
 

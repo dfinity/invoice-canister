@@ -26,65 +26,204 @@ Goals for this project are as follows:
 
 ## The Interface
 ```
-// interface.did
-type Token = variant {
-	ICP: Text;
-	// More to come
-};
+// invoice.did
+type VerifyInvoiceSuccess = 
+ variant {
+   AlreadyVerified: record {invoice: Invoice;};
+   Paid: record {invoice: Invoice;};
+ };
+type VerifyInvoiceResult = 
+ variant {
+   Err: VerifyInvoiceErr;
+   Ok: VerifyInvoiceSuccess;
+ };
+type VerifyInvoiceErr = 
+ record {
+   kind:
+    variant {
+      Expired;
+      InvalidInvoiceId;
+      InvalidToken;
+      NotFound;
+      NotYetPaid;
+      TransferError;
+    };
+   message: opt text;
+ };
+type VerifyInvoiceArgs = record {id: nat;};
+type TransferSuccess = record {blockHeight: nat64;};
+type TransferResult = 
+ variant {
+   Err: TransferError;
+   Ok: TransferSuccess;
+ };
+type TransferError = 
+ record {
+   kind:
+    variant {
+      BadFee;
+      InsufficientFunds;
+      InvalidDestination;
+      InvalidToken;
+      Other;
+    };
+   message: opt text;
+ };
+type TransferArgs = 
+ record {
+   amount: nat;
+   destination: AccountIdentifier;
+   token: Token;
+ };
+type TokenVerbose = 
+ record {
+   decimals: int;
+   meta: opt record {Issuer: text;};
+   symbol: text;
+ };
+type Token = record {symbol: text;};
+type Time = int;
+type RefundInvoiceSuccess = record {blockHeight: nat64;};
+type RefundInvoiceResult = 
+ variant {
+   Err: RefundInvoiceErr;
+   Ok: RefundInvoiceSuccess;
+ };
+type RefundInvoiceErr = 
+ record {
+   kind:
+    variant {
+      AlreadyRefunded;
+      BadFee;
+      InsufficientFunds;
+      InvalidDestination;
+      InvalidInvoiceId;
+      InvalidToken;
+      NotFound;
+      NotYetPaid;
+      Other;
+      TransferError;
+    };
+   message: opt text;
+ };
+type RefundInvoiceArgs = 
+ record {
+   amount: nat;
+   id: nat;
+   refundAccount: AccountIdentifier;
+ };
+type Invoice = 
+ record {
+   amount: nat;
+   amountPaid: nat;
+   creator: principal;
+   destination: AccountIdentifier;
+   details: opt Details;
+   expiration: Time;
+   id: nat;
+   paid: bool;
+   refundAccount: opt AccountIdentifier;
+   refunded: bool;
+   refundedAtTime: opt Time;
+   token: TokenVerbose;
+   verifiedAtTime: opt Time;
+ };
+type GetInvoiceSuccess = record {invoice: Invoice;};
+type GetInvoiceResult = 
+ variant {
+   Err: GetInvoiceErr;
+   Ok: GetInvoiceSuccess;
+ };
+type GetInvoiceErr = 
+ record {
+   kind: variant {
+           InvalidInvoiceId;
+           NotFound;
+         };
+   message: opt text;
+ };
+type GetInvoiceArgs = record {id: nat;};
+type GetCallerIdentifierSuccess = record {
+                                    accountIdentifier: AccountIdentifier;};
+type GetCallerIdentifierResult = 
+ variant {
+   Err: GetCallerIdentifierErr;
+   Ok: GetCallerIdentifierSuccess;
+ };
+type GetCallerIdentifierErr = 
+ record {
+   kind: variant {InvalidToken;};
+   message: opt text;
+ };
+type GetCallerIdentifierArgs = record {token: Token;};
+type GetBalanceSuccess = record {balance: nat;};
+type GetBalanceResult = 
+ variant {
+   Err: GetBalanceErr;
+   Ok: GetBalanceSuccess;
+ };
+type GetBalanceErr = 
+ record {
+   kind: variant {
+           InvalidToken;
+           NotFound;
+         };
+   message: opt text;
+ };
+type GetBalanceArgs = record {token: Token;};
+type Details = 
+ record {
+   description: text;
+   meta: blob;
+ };
+type CreateInvoiceSuccess = record {invoice: Invoice;};
+type CreateInvoiceResult = 
+ variant {
+   Err: CreateInvoiceErr;
+   Ok: CreateInvoiceSuccess;
+ };
+type CreateInvoiceErr = 
+ record {
+   kind:
+    variant {
+      InvalidAmount;
+      InvalidDestination;
+      InvalidDetails;
+      InvalidToken;
+    };
+   message: opt text;
+ };
+type CreateInvoiceArgs = 
+ record {
+   amount: nat;
+   details: opt Details;
+   token: Token;
+ };
+type AccountIdentifier__1 = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+type AccountIdentifier = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+service : {
+  accountIdentifierToBlob: (AccountIdentifier__1) -> (blob);
+  create_invoice: (CreateInvoiceArgs) -> (CreateInvoiceResult);
+  get_balance: (GetBalanceArgs) -> (GetBalanceResult);
+  get_caller_identifier: (GetCallerIdentifierArgs) ->
+   (GetCallerIdentifierResult) query;
+  get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult);
+  refund_invoice: (RefundInvoiceArgs) -> (RefundInvoiceResult);
+  remaining_cycles: () -> (nat) query;
+  transfer: (TransferArgs) -> (TransferResult);
+  verify_invoice: (VerifyInvoiceArgs) -> (VerifyInvoiceResult);
+}
 
-type AccountIdentifier = variant { 
-	Text;
-	Principal;
-},
-
-type PrivateInfo = {
-	// human-readable description of the transaction
-	description: Text;
-	meta: Blob;
-};
-
-type Invoice = record {
-	id: Hash; // uuid
-	creator: Principal;
-	privateInfo: PrivateInfo;
-	amount: Nat;
-	amount_transferred: Nat;
-	token: Token;
-	verifiedAtTime: opt Time;
-	paid: Bool;
-	refunded: Bool;
-	expiration: Time;
-	destination: AccountIdentifier;
-	refundAccount: opt AccountIdentifier;
-};
-
-type InvoiceCreateArgs = record {
-	amount: Nat;
-    token: Token;
-	destination: opt AccountIdentifier;
-	privateInfo: opt PrivateInfo;
-	refundAccount: opt AccountIdentifier;
-};
-
-type TransferArgs = record {
-    amount: Nat;
-    token: Token;
-	destination: AccountIdentifier;
-	source: opt AccountIdentifier;
-};
-
-type BalanceArgs = record {
-	token: Token;
-};
-
-service {
-	create_invoice(InvoiceCreateArgs) -> (Invoice);
-	refund_invoice(Hash) -> (Result);
-	get_invoice(Hash) -> (Invoice) query;
-	get_balance(BalanceArgs) -> Nat;
-	transfer(TransferArgs) -> (Result);
-	validate_payment(Hash) -> Status;
-};
 ```
 
 

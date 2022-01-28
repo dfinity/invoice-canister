@@ -16,6 +16,7 @@ test:
 
 e2e:
 	# ./install-local.sh
+	npm ci
 	npm test
 
 watch:

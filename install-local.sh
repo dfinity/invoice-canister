@@ -20,5 +20,3 @@ rm src/ledger/ledger.did
 cp src/ledger/ledger.public.did src/ledger/ledger.did
 
 dfx deploy invoice
-
-npm install
