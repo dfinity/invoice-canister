@@ -97,13 +97,16 @@ export const idlFactory = ({ IDL }) => {
   const RefundInvoiceSuccess = IDL.Record({ 'blockHeight' : IDL.Nat64 });
   const RefundInvoiceErr = IDL.Record({
     'kind' : IDL.Variant({
+      'InvalidDestination' : IDL.Null,
       'TransferError' : IDL.Null,
       'NotFound' : IDL.Null,
+      'BadFee' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'InvalidInvoiceId' : IDL.Null,
       'AlreadyRefunded' : IDL.Null,
+      'Other' : IDL.Null,
       'NotYetPaid' : IDL.Null,
-      'NoRefundDestination' : IDL.Null,
+      'InsufficientFunds' : IDL.Null,
     }),
     'message' : IDL.Opt(IDL.Text),
   });

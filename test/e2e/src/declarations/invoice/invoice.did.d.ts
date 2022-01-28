@@ -70,13 +70,16 @@ export interface RefundInvoiceArgs {
   'amount' : bigint,
 }
 export interface RefundInvoiceErr {
-  'kind' : { 'TransferError' : null } |
+  'kind' : { 'InvalidDestination' : null } |
+    { 'TransferError' : null } |
     { 'NotFound' : null } |
+    { 'BadFee' : null } |
     { 'InvalidToken' : null } |
     { 'InvalidInvoiceId' : null } |
     { 'AlreadyRefunded' : null } |
+    { 'Other' : null } |
     { 'NotYetPaid' : null } |
-    { 'NoRefundDestination' : null },
+    { 'InsufficientFunds' : null },
   'message' : [] | [string],
 }
 export type RefundInvoiceResult = { 'Ok' : RefundInvoiceSuccess } |

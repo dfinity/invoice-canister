@@ -34,5 +34,6 @@ Then, install Vessel following the guide at https://github.com/dfinity/vessel.
 
 You will also need to install `wasmtime`. For macOS, you can install with `brew install wasmtime`. For Linux, you can install with `sudo apt-get install wasmtime`.
 
-To run unit tests, use `make unit-test`.
-To run end-to-end tests, use `make e2e-test`.
+To run unit tests, use `make test`.
+
+To run the end-to-end JavaScript tests, first install fresh with with `./install-local.sh`. Then, run `npm test`.

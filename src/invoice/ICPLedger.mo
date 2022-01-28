@@ -75,8 +75,24 @@ module {
             case (#Ok index){
                 Debug.print(Nat64.toText(index));
             };
-            case (#Err _){
-                Debug.print("Error");
+            case (#Err err){
+                switch(err){
+                    case (#BadFee expected_fee){
+                        Debug.print("BadFee");
+                    };
+                    case (#InsufficientFunds balance){
+                        Debug.print("InsufficientFunds");
+                    };
+                    case (#TxTooOld allowed_window_nanos){
+                        Debug.print("TxTooOld");
+                    };
+                    case (#TxCreatedInFuture){
+                        Debug.print("TxCreatedInFuture");
+                    };
+                    case (#TxDuplicate duplicate_of){
+                        Debug.print("TxDuplicate");
+                    };
+                };
             };
         };
         return result;
@@ -204,7 +220,7 @@ module {
                     };
                     amount = {
                         // Total amount, minus the fee
-                        e8s = Nat64.sub(Nat64.fromNat(i.amount), 10000);
+                        e8s = Nat64.sub(Nat64.fromNat(balance), 10000);
                     };
                     from_subaccount = ?subaccount;
                     to = getDefaultAccount({caller = args.caller; canisterId = args.canisterId});

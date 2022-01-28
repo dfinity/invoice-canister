@@ -65,11 +65,14 @@ type RefundInvoiceErr =
    kind:
     variant {
       AlreadyRefunded;
+      BadFee;
+      InsufficientFunds;
+      InvalidDestination;
       InvalidInvoiceId;
       InvalidToken;
-      NoRefundDestination;
       NotFound;
       NotYetPaid;
+      Other;
       TransferError;
     };
    message: opt text;

@@ -224,10 +224,13 @@ module {
             #InvalidInvoiceId;
             #NotFound;
             #NotYetPaid;
-            #NoRefundDestination;
+            #InvalidDestination;
             #TransferError;
+            #InsufficientFunds;
             #InvalidToken;
             #AlreadyRefunded;
+            #BadFee;
+            #Other;
         };
     };
 // #endregion

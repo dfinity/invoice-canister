@@ -251,6 +251,22 @@ actor Invoice {
 
 // #region Refund Invoice
     public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
+        try {
+            let destination : ICP.AccountIdentifier = await U.accountIdentifierToBlob(args.refundAccount);
+
+            let validated = A.validateAccountIdentifier(destination);
+            if(validated == false){
+                return #Err({
+                    message = ?"Invalid destination account identifier for ICP";
+                    kind = #InvalidDestination;
+                });
+            };
+        } catch (e) {
+            return #Err({
+                message = ?"Invalid destination account identifier for ICP";
+                kind = #InvalidDestination;
+            });
+        };
         let invoice = invoices.get(args.id);
         switch (invoice){
             case(null){
@@ -270,14 +286,22 @@ actor Invoice {
 
                 var destination : AccountIdentifier = args.refundAccount;
                 
-                let transferResult = await transfer({
-                    amount = args.amount;
-                    token = i.token;
-                    destination = destination;
-                });
+                let transferResult = await ICP.transfer({
+                    memo = 0;
+                    fee = {
+                        e8s = 10000;
+                    };
+                    amount = {
+                        // Total amount, minus the fee
+                        e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
+                    };
+                    from_subaccount = ?A.principalToSubaccount(caller);
 
-                switch (transferResult){
-                    case(#Ok result){
+                    to = await U.accountIdentifierToBlob(destination);
+                    created_at_time = null;
+                });
+                switch (transferResult) {
+                    case (#Ok result) {
                         let updatedInvoice = {
                             id = i.id;
                             creator = i.creator;
@@ -294,15 +318,29 @@ actor Invoice {
                             refundAccount = ?destination;
                         };
                         let replaced = invoices.put(i.id, updatedInvoice);
-                        return #Ok({
-                            blockHeight = result.blockHeight;
-                        });
+                        return #Ok({blockHeight = result});
                     };
-                    case(#Err _){
-                        return #Err({
-                            message = ?"Could not refund invoice";
-                            kind = #TransferError;
-                        });
+                    case (#Err err) {
+                        switch (err){
+                            case (#BadFee f){
+                                return #Err({
+                                    message = ?"Bad fee";
+                                    kind = #BadFee;
+                                });
+                            };
+                            case (#InsufficientFunds f){
+                                return #Err({
+                                    message = ?"Insufficient funds";
+                                    kind = #InsufficientFunds;
+                                });
+                            };
+                            case (_){
+                                return #Err({
+                                    message = ?"Could not transfer funds to invoice creator.";
+                                    kind = #Other;
+                                });
+                            }
+                        };
                     };
                 };
             };

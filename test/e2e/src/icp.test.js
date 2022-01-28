@@ -28,9 +28,7 @@ beforeAll(async () => {
   createResult = await defaultActor.create_invoice(testInvoice);
 });
 
-let balanceNeedsReset = false;
 const resetBalance = async () => {
-  if (!balanceNeedsReset) return;
   let balance = await defaultActor.get_balance({
     token: {
       symbol: "ICP",
@@ -40,7 +38,7 @@ const resetBalance = async () => {
     let amount = balance.Ok.balance;
     if (amount > 0n) {
       // Transfer full balance back to the balance holder
-      defaultActor.transfer({
+      let result = await defaultActor.transfer({
         amount,
         token: {
           symbol: "ICP",
@@ -49,6 +47,7 @@ const resetBalance = async () => {
           text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
         },
       });
+      return result;
     }
   }
 };
@@ -56,7 +55,6 @@ afterEach(async () => {
   await resetBalance();
 });
 afterAll(async () => {
-  balanceNeedsReset = true;
   await resetBalance();
 });
 
@@ -144,8 +142,9 @@ describe("ICP Tests", () => {
         id: createResult.Ok.invoice.id,
       });
       expect(verifyResult.Ok?.Paid?.invoice?.paid).toBe(true);
-      balanceNeedsReset = true;
     });
+  });
+  describe("Refund Tests", () => {
     it("should handle a full flow, with a refund", async () => {
       const newInvoice = await defaultActor.create_invoice(testInvoice);
       await balanceHolder.transfer({
@@ -165,11 +164,10 @@ describe("ICP Tests", () => {
         // refunding the full amount minus the fee
         amount: newInvoice.Ok.invoice.amount - FEE,
         refundAccount: {
-          text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
+          text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b".toUpperCase(),
         },
       });
-      console.log(refund);
-      balanceNeedsReset = true;
+      expect(refund.Ok).toBeTruthy();
     });
     it("should handle refund errors successfully", async () => {
       const newInvoice = await defaultActor.create_invoice(testInvoice);
@@ -187,6 +185,7 @@ describe("ICP Tests", () => {
 
       const refund = await defaultActor.refund_invoice({
         id: newInvoice.Ok.invoice.id,
+        // The balance will be {FEE} less than the amount at this point
         amount: newInvoice.Ok.invoice.amount,
         refundAccount: {
           text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b",
@@ -194,11 +193,10 @@ describe("ICP Tests", () => {
       });
       expect(refund).toStrictEqual({
         Err: {
-          kind: { TransferError: null },
-          message: ["Could not refund invoice"],
+          kind: { InsufficientFunds: null },
+          message: ["Insufficient funds"],
         },
       });
-      balanceNeedsReset = true;
     });
   });
   describe("already completed Invoice", () => {
@@ -214,6 +212,7 @@ describe("ICP Tests", () => {
    */
   describe("Transfer Tests", () => {
     it("should increase a caller's icp balance after transferring to that account", async () => {
+      resetBalance(); //?
       let destination = await defaultActor.get_caller_identifier({
         token: { symbol: "ICP" },
       });
@@ -230,31 +229,25 @@ describe("ICP Tests", () => {
             symbol: "ICP",
           },
         });
-        expect(newBalance).toStrictEqual({ Ok: { balance: 990000n } });
-        balanceNeedsReset = true;
+        expect(newBalance).toStrictEqual({ Ok: { balance: 1000000n - FEE } });
       }
     });
     it("should not allow a caller to transfer to an invalid account", async () => {
-      try {
-        let transferResult = await balanceHolder.transfer({
-          amount: 1000000n,
-          token: {
-            symbol: "ICP",
-          },
-          destination: {
-            text: "abc123",
-          },
-        });
-        expect(transferResult.Err).toStrictEqual({
-          Err: {
-            kind: { InvalidDestination: null },
-            message: ["Invalid destination account identifier for ICP"],
-          },
-        });
-      } catch (error) {
-        console.trace(error);
-      }
-      balanceNeedsReset = true;
+      let transferResult = await balanceHolder.transfer({
+        amount: 1000000n,
+        token: {
+          symbol: "ICP",
+        },
+        destination: {
+          text: "abc123",
+        },
+      });
+      expect(transferResult).toStrictEqual({
+        Err: {
+          kind: { InvalidDestination: null },
+          message: ["Invalid destination account identifier for ICP"],
+        },
+      });
     });
     it("should not allow a caller to transfer more than their balance", async () => {
       let transferResult = await defaultActor.transfer({

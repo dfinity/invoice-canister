@@ -10,12 +10,13 @@ check-strict:
 docs:
 	$(shell vessel bin)/mo-doc
 
-unit-test:
+test:
 	moc $(shell vessel sources) -wasi-system-api -o Test.wasm test/unit/Test.mo && wasmtime Test.wasm
 	rm -f Test.wasm
 
-e2e-test:
-	make -C e2e
+e2e:
+	# ./install-local.sh
+	npm test
 
 watch:
 	while true; do \
