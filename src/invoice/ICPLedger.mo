@@ -16,246 +16,245 @@ import Time "mo:base/Time";
 import Text "mo:base/Text";
 
 module {
-    public type Memo = Nat64;
+  public type Memo = Nat64;
 
-    public type Tokens = {
-        e8s : Nat64;
+  public type Tokens = {
+    e8s : Nat64;
+  };
+
+  public type TimeStamp = {
+    timestamp_nanos: Nat64;
+  };
+
+  public type AccountIdentifier = Blob;
+  
+  public type SubAccount = Blob;
+
+  public type BlockIndex = Nat64;
+
+  public type TransferError = {
+    #BadFee: {
+      expected_fee: Tokens;
     };
-
-    public type TimeStamp = {
-        timestamp_nanos: Nat64;
+    #InsufficientFunds: {
+      balance: Tokens;
     };
+    #TxTooOld: {
+      allowed_window_nanos: Nat64;
+    };
+    #TxCreatedInFuture;
+    #TxDuplicate : {
+      duplicate_of: BlockIndex;
+    };
+  };
 
-    public type AccountIdentifier = Blob;
-    
-    public type SubAccount = Blob;
+  public type TransferArgs = {
+    memo: Memo;
+    amount: Tokens;
+    fee: Tokens;
+    from_subaccount: ?SubAccount;
+    to: AccountIdentifier;
+    created_at_time: ?TimeStamp;
+  };
 
-    public type BlockIndex = Nat64;
+  public type TransferResult = {
+    #Ok: BlockIndex;
+    #Err: TransferError;
+  };
 
-    public type TransferError = {
-        #BadFee: {
-            expected_fee: Tokens;
+  public func transfer (args: TransferArgs) : async TransferResult {
+    let result = await Ledger.transfer({
+      memo = args.memo;
+      amount = args.amount;
+      fee = args.fee;
+      from_subaccount = args.from_subaccount;
+      to = args.to;
+      created_at_time = args.created_at_time;
+    });
+    switch (result){
+      case (#Ok index){
+        Debug.print(Nat64.toText(index));
+      };
+      case (#Err err){
+        switch(err){
+          case (#BadFee expected_fee){
+            Debug.print("BadFee");
+          };
+          case (#InsufficientFunds balance){
+            Debug.print("InsufficientFunds");
+          };
+          case (#TxTooOld allowed_window_nanos){
+            Debug.print("TxTooOld");
+          };
+          case (#TxCreatedInFuture){
+            Debug.print("TxCreatedInFuture");
+          };
+          case (#TxDuplicate duplicate_of){
+            Debug.print("TxDuplicate");
+          };
         };
-        #InsufficientFunds: {
-            balance: Tokens;
-        };
-        #TxTooOld: {
-            allowed_window_nanos: Nat64;
-        };
-        #TxCreatedInFuture;
-        #TxDuplicate : {
-            duplicate_of: BlockIndex;
-        };
+      };
     };
+    return result;
+  };
 
-    public type TransferArgs = {
-        memo: Memo;
-        amount: Tokens;
-        fee: Tokens;
-        from_subaccount: ?SubAccount;
-        to: AccountIdentifier;
-        created_at_time: ?TimeStamp;
+  type AccountArgs = {
+    // Hex-encoded AccountIdentifier
+    account : Text;
+  };
+  type BalanceResult = {
+    #Ok: {
+      balance: Nat;
     };
-
-    public type TransferResult = {
-        #Ok: BlockIndex;
-        #Err: TransferError;
+    #Err: {
+      error: Text;
     };
-
-    public func transfer (args: TransferArgs) : async TransferResult {
-        let result = await Ledger.transfer({
-            memo = args.memo;
-            amount = args.amount;
-            fee = args.fee;
-            from_subaccount = args.from_subaccount;
-            to = args.to;
-            created_at_time = args.created_at_time;
+  };
+  public func balance(args: AccountArgs) : async BalanceResult {
+    switch (Hex.decode(args.account)){
+      case (#err err){
+        #Err({
+          error = "Invalid account";
         });
-        switch (result){
-            case (#Ok index){
-                Debug.print(Nat64.toText(index));
-            };
-            case (#Err err){
-                switch(err){
-                    case (#BadFee expected_fee){
-                        Debug.print("BadFee");
-                    };
-                    case (#InsufficientFunds balance){
-                        Debug.print("InsufficientFunds");
-                    };
-                    case (#TxTooOld allowed_window_nanos){
-                        Debug.print("TxTooOld");
-                    };
-                    case (#TxCreatedInFuture){
-                        Debug.print("TxCreatedInFuture");
-                    };
-                    case (#TxDuplicate duplicate_of){
-                        Debug.print("TxDuplicate");
-                    };
-                };
-            };
-        };
-        return result;
+      };
+      case (#ok account) {
+        let balance = await Ledger.account_balance({account = Blob.fromArray(account)});
+        #Ok({
+          balance = Nat64.toNat(balance.e8s);
+        });
+      };
     };
+  };
 
-    type AccountArgs = {
-        // Hex-encoded AccountIdentifier
-        account : Text;
-    };
-    type BalanceResult = {
-        #Ok: {
-            balance: Nat;
+  type DefaultAccountArgs = {
+    // Hex-encoded AccountIdentifier
+    caller : Principal;
+    canisterId : Principal;
+  };
+  public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
+    A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.caller));
+  };
+
+  public type GetICPAccountIdentifierArgs = {
+    principal : Principal;
+    subaccount : SubAccount;
+  };
+  public func getICPAccountIdentifier(args: GetICPAccountIdentifierArgs) : Blob {
+    A.accountIdentifier(args.principal, args.subaccount);
+  };
+
+  public type ICPVerifyInvoiceArgs = {
+    invoice : T.Invoice;
+    caller : Principal;
+    canisterId : Principal;
+  };
+  public func verifyInvoice(args: ICPVerifyInvoiceArgs) : async T.VerifyInvoiceResult {
+    let i = args.invoice;
+    let destination = U.accountIdentifierToText(i.destination);
+    let balanceResult = await balance({account = destination});
+
+    switch(balanceResult){
+      case(#Err err){
+        #Err({
+          message = ?"Could not get balance";
+          kind = #NotFound;
+        });
+      };
+      case(#Ok b){
+        let balance = b.balance;
+        // If balance is less than invoice amount, return error
+        if(balance < i.amount){
+          if(balance != i.amountPaid){
+            let updatedInvoice = {
+              id = i.id;
+              creator = args.caller;
+              details = i.details;
+              amount = i.amount;
+              // Update invoice with latest balance
+              amountPaid = balance;
+              token = i.token;
+              verifiedAtTime = i.verifiedAtTime;
+              paid = false;
+              refunded = false;
+              expiration = i.expiration;
+              destination = i.destination;
+              refundAccount = i.refundAccount;
+            };
+          };
+
+          return #Err({
+            message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
+            kind = #NotYetPaid;
+          });
         };
-        #Err: {
-            error: Text;
+
+        let verifiedAtTime: ?Time.Time = ?Time.now();
+        // Otherwise, update with latest balance and mark as paid
+        let verifiedInvoice = {
+          id = i.id;
+          creator = args.caller;
+          details = i.details;
+          amount = i.amount;
+          // update amountPaid
+          amountPaid = balance;
+          token = i.token;
+          // update verifiedAtTime
+          verifiedAtTime;
+          refundedAtTime = i.refundedAtTime;
+          // update paid
+          paid = true;
+          refunded = false;
+          expiration = i.expiration;
+          destination = i.destination;
+          refundAccount = i.refundAccount;
         };
-    };
-    public func balance(args: AccountArgs) : async BalanceResult {
-        switch (Hex.decode(args.account)){
-            case (#err err){
-                #Err({
-                    error = "Invalid account";
+
+        // TODO Transfer funds to default subaccount of invoice creator
+        let subaccount: SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
+
+        let transferResult = await transfer({
+          memo = 0;
+          fee = {
+            e8s = 10000;
+          };
+          amount = {
+            // Total amount, minus the fee
+            e8s = Nat64.sub(Nat64.fromNat(balance), 10000);
+          };
+          from_subaccount = ?subaccount;
+          to = getDefaultAccount({caller = args.caller; canisterId = args.canisterId});
+          created_at_time = null;
+        });
+        switch (transferResult) {
+          case (#Ok result) {
+            return #Ok(#Paid {
+              invoice = verifiedInvoice;
+            });
+          };
+          case (#Err err) {
+            switch (err) {
+              case (#BadFee f) {
+                return #Err({
+                  message = ?"Bad fee";
+                  kind = #TransferError;
                 });
-            };
-            case (#ok account) {
-                let balance = await Ledger.account_balance({account = Blob.fromArray(account)});
-                #Ok({
-                    balance = Nat64.toNat(balance.e8s);
+              };
+              case (#InsufficientFunds f) {
+                return #Err({
+                  message = ?"Insufficient funds";
+                  kind = #TransferError;
                 });
+              };
+              case (_) {
+                return #Err({
+                  message = ?"Could not transfer funds to invoice creator.";
+                  kind = #TransferError;
+                });
+              }
             };
+          };
         };
+      };
     };
-
-    type DefaultAccountArgs = {
-        // Hex-encoded AccountIdentifier
-        caller : Principal;
-        canisterId : Principal;
-    };
-    public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
-        A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.caller));
-    };
-
-    public type GetICPAccountIdentifierArgs = {
-        principal : Principal;
-        subaccount : SubAccount;
-    };
-    public func getICPAccountIdentifier(args: GetICPAccountIdentifierArgs) : Blob {
-        A.accountIdentifier(args.principal, args.subaccount);
-    };
-
-    public type ICPVerifyInvoiceArgs = {
-        invoice : T.Invoice;
-        caller : Principal;
-        canisterId : Principal;
-    };
-    public func verifyInvoice(args: ICPVerifyInvoiceArgs) : async T.VerifyInvoiceResult {
-        let i = args.invoice;
-        let destination = U.accountIdentifierToText(i.destination);
-        let balanceResult = await balance({account = destination});
-
-        switch(balanceResult){
-            case(#Err err){
-                #Err({
-                    message = ?"Could not get balance";
-                    kind = #NotFound;
-                });
-            };
-            case(#Ok b){
-                let balance = b.balance;
-                // If balance is less than invoice amount, return error
-                if(balance < i.amount){
-
-                    if(balance != i.amountPaid){
-                        let updatedInvoice = {
-                            id = i.id;
-                            creator = args.caller;
-                            details = i.details;
-                            amount = i.amount;
-                            // Update invoice with latest balance
-                            amountPaid = balance;
-                            token = i.token;
-                            verifiedAtTime = i.verifiedAtTime;
-                            paid = false;
-                            refunded = false;
-                            expiration = i.expiration;
-                            destination = i.destination;
-                            refundAccount = i.refundAccount;
-                        };
-                    };
-
-                    return #Err({
-                        message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
-                        kind = #NotYetPaid;
-                    });
-                };
-
-                let verifiedAtTime: ?Time.Time = ?Time.now();
-                // Otherwise, update with latest balance and mark as paid
-                let verifiedInvoice = {
-                    id = i.id;
-                    creator = args.caller;
-                    details = i.details;
-                    amount = i.amount;
-                    // update amountPaid
-                    amountPaid = balance;
-                    token = i.token;
-                    // update verifiedAtTime
-                    verifiedAtTime;
-                    refundedAtTime = i.refundedAtTime;
-                    // update paid
-                    paid = true;
-                    refunded = false;
-                    expiration = i.expiration;
-                    destination = i.destination;
-                    refundAccount = i.refundAccount;
-                };
-
-                // TODO Transfer funds to default subaccount of invoice creator
-                let subaccount: SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
-
-                let transferResult = await transfer({
-                    memo = 0;
-                    fee = {
-                        e8s = 10000;
-                    };
-                    amount = {
-                        // Total amount, minus the fee
-                        e8s = Nat64.sub(Nat64.fromNat(balance), 10000);
-                    };
-                    from_subaccount = ?subaccount;
-                    to = getDefaultAccount({caller = args.caller; canisterId = args.canisterId});
-                    created_at_time = null;
-                });
-                switch (transferResult) {
-                    case (#Ok result) {
-                        return #Ok(#Paid{
-                            invoice = verifiedInvoice;
-                        });
-                    };
-                    case (#Err err) {
-                        switch (err){
-                            case (#BadFee f){
-                                return #Err({
-                                    message = ?"Bad fee";
-                                    kind = #TransferError;
-                                });
-                            };
-                            case (#InsufficientFunds f){
-                                return #Err({
-                                    message = ?"Insufficient funds";
-                                    kind = #TransferError;
-                                });
-                            };
-                            case (_){
-                                return #Err({
-                                    message = ?"Could not transfer funds to invoice creator.";
-                                    kind = #TransferError;
-                                });
-                            }
-                        };
-                    };
-                };
-            };
-        };
-    };
+  };
 }
