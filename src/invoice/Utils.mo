@@ -1,16 +1,17 @@
-import Prim "mo:⛔";
-import T "./Types";
-import A "./Account";
-import Hex "./Hex";
-import SHA224 "./SHA224";
-import CRC32 "./CRC32";
-import Blob "mo:base/Blob";
-import Buffer "mo:base/Buffer";
-import Principal "mo:base/Principal";
-import Text "mo:base/Text";
-import Error "mo:base/Error";
-import Nat8 "mo:base/Nat8";
-import Array "mo:base/Array";
+import A          "./Account";
+import CRC32      "./CRC32";
+import Hex        "./Hex";
+import SHA224     "./SHA224";
+import T          "./Types";
+
+import Array      "mo:base/Array";
+import Blob       "mo:base/Blob";
+import Buffer     "mo:base/Buffer";
+import Error      "mo:base/Error";
+import Nat8       "mo:base/Nat8";
+import Prim       "mo:⛔";
+import Principal  "mo:base/Principal";
+import Text       "mo:base/Text";
 
 module {
   type AccountIdentifier = T.AccountIdentifier;

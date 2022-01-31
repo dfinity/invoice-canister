@@ -1,12 +1,13 @@
-import A "../../src/invoice/Account";
-import U "../../src/invoice/Utils";
-import Hex "../../src/invoice/Hex";
-import Principal "mo:base/Principal";
-import Debug "mo:base/Debug";
-import Blob "mo:base/Blob";
-import Text "mo:base/Text";
-import Result "mo:base/Result";
-import Prim "mo:⛔";
+import A          "../../src/invoice/Account";
+import Hex        "../../src/invoice/Hex";
+import U          "../../src/invoice/Utils";
+
+import Blob       "mo:base/Blob";
+import Debug      "mo:base/Debug";
+import Prim       "mo:⛔";
+import Principal  "mo:base/Principal";
+import Result     "mo:base/Result";
+import Text       "mo:base/Text";
 
 import ActorSpec "./utils/ActorSpec";
 type Group = ActorSpec.Group;

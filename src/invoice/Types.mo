@@ -1,5 +1,5 @@
-import Time "mo:base/Time";
-import Result "mo:base/Result";
+import Result     "mo:base/Result";
+import Time       "mo:base/Time";
 
 module {
 /**
