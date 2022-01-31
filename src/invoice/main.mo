@@ -251,95 +251,103 @@ actor Invoice {
 
 // #region Refund Invoice
   public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
-    try {
-      let destination : ICP.AccountIdentifier = await U.accountIdentifierToBlob(args.refundAccount);
+    let canisterId = Principal.fromActor(Invoice);
+    let invoice = invoices.get(args.id);
 
-      let validated = A.validateAccountIdentifier(destination);
-      if(validated == false){
+    let accountResult = U.accountIdentifierToBlob({
+      accountIdentifier = args.refundAccount;
+      canisterId = ?canisterId;
+    });
+    switch(accountResult){
+      case(#err err){
         return #err({
-          message = ?"Invalid destination account identifier for ICP";
+          message = err.message;
           kind = #InvalidDestination;
         });
       };
-    } catch (e) {
-      return #err({
-        message = ?"Invalid destination account identifier for ICP";
-        kind = #InvalidDestination;
-      });
-    };
-    let invoice = invoices.get(args.id);
-    switch (invoice){
-      case(null){
-        return #err({
-          message = ?"Invoice not found";
-          kind = #NotFound;
-        });
-      };
-      case(? i){
-        // Return if already refunded
-        if (i.refundedAtTime != null){
-          return #err({
-            message = ?"Invoice already refunded";
-            kind = #AlreadyRefunded;
-          });
-        };
-
-        var destination : AccountIdentifier = args.refundAccount;
-
-        let transferResult = await ICP.transfer({
-          memo = 0;
-          fee = {
-            e8s = 10000;
+      case (#ok destination){
+        let invoice = invoices.get(args.id);
+        switch (invoice){
+          case(null){
+            return #err({
+              message = ?"Invoice not found";
+              kind = #NotFound;
+            });
           };
-          amount = {
-            // Total amount, minus the fee
-            e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
-          };
-          from_subaccount = ?A.principalToSubaccount(caller);
-          to = await U.accountIdentifierToBlob(destination);
-          created_at_time = null;
-        });
-        switch (transferResult) {
-          case (#ok result) {
-            let updatedInvoice = {
-              id = i.id;
-              creator = i.creator;
-              details = i.details;
-              amount = i.amount;
-              amountPaid = i.amountPaid;
-              token = i.token;
-              verifiedAtTime = i.verifiedAtTime;
-              refundedAtTime = ?Time.now();
-              paid = i.paid;
-              refunded = true;
-              expiration = i.expiration;
-              destination = i.destination;
-              refundAccount = ?destination;
+          case(? i){
+            // Return if already refunded
+            if (i.refundedAtTime != null){
+              return #err({
+                message = ?"Invoice already refunded";
+                kind = #AlreadyRefunded;
+              });
             };
-            let replaced = invoices.put(i.id, updatedInvoice);
-            return #ok(result);
-          };
-          case (#err err) {
-            switch (err.kind){
-              case (#BadFee f){
+            switch(i.token.symbol){
+              case("ICP"){
+                let transferResult = await ICP.transfer({
+                  memo = 0;
+                  fee = {
+                    e8s = 10000;
+                  };
+                  amount = {
+                    // Total amount, minus the fee
+                    e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
+                  };
+                  from_subaccount = ?A.principalToSubaccount(caller);
+                  to = destination;
+                  created_at_time = null;
+                });
+                switch (transferResult) {
+                  case (#ok result) {
+                    let updatedInvoice = {
+                      id = i.id;
+                      creator = i.creator;
+                      details = i.details;
+                      amount = i.amount;
+                      amountPaid = i.amountPaid;
+                      token = i.token;
+                      verifiedAtTime = i.verifiedAtTime;
+                      refundedAtTime = ?Time.now();
+                      paid = i.paid;
+                      refunded = true;
+                      expiration = i.expiration;
+                      destination = i.destination;
+                      refundAccount = ?#blob(destination);
+                    };
+                    let replaced = invoices.put(i.id, updatedInvoice);
+                    return #ok(result);
+                  };
+                  case (#err err) {
+                    switch (err.kind){
+                      case (#BadFee f){
+                        return #err({
+                          message = err.message;
+                          kind = #BadFee;
+                        });
+                      };
+                      case (#InsufficientFunds f){
+                        return #err({
+                          message = err.message;
+                          kind = #InsufficientFunds;
+                        });
+                      };
+                      case (_){
+                        return #err({
+                          message = err.message;
+                          kind = #Other;
+                        });
+                      }
+                    };
+                  };
+                };
+              };
+              case(_){
                 return #err({
-                  message = err.message;
-                  kind = #BadFee;
+                  message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+                  kind = #InvalidToken;
                 });
               };
-              case (#InsufficientFunds f){
-                return #err({
-                  message = err.message;
-                  kind = #InsufficientFunds;
-                });
-              };
-              case (_){
-                return #err({
-                  message = err.message;
-                  kind = #Other;
-                });
-              }
-            };
+            }
           };
         };
       };
@@ -350,73 +358,72 @@ actor Invoice {
 // #region Transfer
   public shared ({caller}) func transfer (args: T.TransferArgs) : async T.TransferResult {
     let token = args.token;
-    switch(token.symbol){
-      case("ICP"){
-        let now = Nat64.fromIntWrap(Time.now());
-        try {
-          let destination : ICP.AccountIdentifier = await U.accountIdentifierToBlob(args.destination);
-
-          let validated = A.validateAccountIdentifier(destination);
-          if(validated == false){
-            return #err({
-              message = ?"Invalid destination account identifier for ICP";
-              kind = #InvalidDestination;
-            });
-          };
-        } catch (e) {
-          return #err({
-            message = ?"Invalid destination account identifier for ICP";
-            kind = #InvalidDestination;
-          });
-        };
-
-        let transferResult = await ICP.transfer({
-          memo = 0;
-          fee = {
-            e8s = 10000;
-          };
-          amount = {
-            // Total amount, minus the fee
-            e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
-          };
-          from_subaccount = ?A.principalToSubaccount(caller);
-
-          to = await U.accountIdentifierToBlob(args.destination);
-          created_at_time = null;
+    let accountResult = U.accountIdentifierToBlob({
+      accountIdentifier = args.destination;
+      canisterId = ?Principal.fromActor(Invoice);
+    });
+    switch (accountResult){
+      case (#err err){
+        return #err({
+          message = err.message;
+          kind = #InvalidDestination;
         });
-        switch (transferResult) {
-          case (#ok result) {
-            return #ok(result);
-          };
-          case (#err err) {
-            switch (err.kind){
-              case (#BadFee _){
-                return #err({
-                  message = err.message;
-                  kind = #BadFee;
-                });
+      };
+      case (#ok destination){
+        switch(token.symbol){
+          case("ICP"){
+            let now = Nat64.fromIntWrap(Time.now());
+            
+
+            let transferResult = await ICP.transfer({
+              memo = 0;
+              fee = {
+                e8s = 10000;
               };
-              case (#InsufficientFunds _){
-                return #err({
-                  message = err.message;
-                  kind = #InsufficientFunds;
-                });
+              amount = {
+                // Total amount, minus the fee
+                e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
               };
-              case (_){
-                return #err({
-                  message = err.message;
-                  kind = #Other;
-                });
-              }
+              from_subaccount = ?A.principalToSubaccount(caller);
+
+              to = destination;
+              created_at_time = null;
+            });
+            switch (transferResult) {
+              case (#ok result) {
+                return #ok(result);
+              };
+              case (#err err) {
+                switch (err.kind){
+                  case (#BadFee _){
+                    return #err({
+                      message = err.message;
+                      kind = #BadFee;
+                    });
+                  };
+                  case (#InsufficientFunds _){
+                    return #err({
+                      message = err.message;
+                      kind = #InsufficientFunds;
+                    });
+                  };
+                  case (_){
+                    return #err({
+                      message = err.message;
+                      kind = #Other;
+                    });
+                  }
+                };
+              };
             };
           };
+          case(_){
+            return #err({
+              message = ?"Token not supported";
+              kind = #InvalidToken;
+            });
+          };
         };
-      };
-      case(_){
-        return #err({
-          message = ?"Token not supported";
-          kind = #InvalidToken;
-        });
       };
     };
   };
@@ -454,8 +461,11 @@ actor Invoice {
   public query func remaining_cycles() : async Nat {
     return Cycles.balance()
   };
-  public func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async Blob {
-    return await U.accountIdentifierToBlob(accountIdentifier);
+  public func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async T.AccountIdentifierToBlobResult {
+    return U.accountIdentifierToBlob({
+      accountIdentifier;
+      canisterId = ?Principal.fromActor(Invoice);
+    });
   };
 // #endregion
 

@@ -217,4 +217,36 @@ module {
     };
   };
 // #endregion
+
+// #region accountIdentifierToBlob
+  public type AccountIdentifierToBlobArgs = {
+    accountIdentifier: AccountIdentifier;
+    canisterId: ?Principal;
+  };
+  public type AccountIdentifierToBlobResult = Result.Result<AccountIdentifierToBlobSuccess, AccountIdentifierToBlobErr>;
+  public type AccountIdentifierToBlobSuccess = Blob;
+  public type AccountIdentifierToBlobErr = {
+    message: ?Text; 
+    kind: {
+      #InvalidAccountIdentifier;
+      #Other;
+    };
+  };
+// #endregion
+
+// #region accountIdentifierToText
+  public type AccountIdentifierToTextArgs = {
+    accountIdentifier: AccountIdentifier;
+    canisterId: ?Principal;
+  };
+  public type AccountIdentifierToTextResult = Result.Result<AccountIdentifierToTextSuccess, AccountIdentifierToTextErr>;
+  public type AccountIdentifierToTextSuccess = Text;
+  public type AccountIdentifierToTextErr = {
+    message: ?Text; 
+    kind: {
+      #InvalidAccountIdentifier;
+      #Other;
+    };
+  };
+// #endregion
 };

@@ -7,6 +7,7 @@ import Principal "mo:base/Principal";
 import Text      "mo:base/Text";
 import CRC32     "./CRC32";
 import SHA224    "./SHA224";
+import Prim "mo:⛔";
 
 module {
   // 32-byte array.

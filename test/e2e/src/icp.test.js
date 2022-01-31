@@ -245,7 +245,7 @@ describe("ICP Tests", () => {
       expect(transferResult).toStrictEqual({
         err: {
           kind: { InvalidDestination: null },
-          message: ["Invalid destination account identifier for ICP"],
+          message: ["Invalid account identifier"],
         },
       });
     });

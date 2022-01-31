@@ -178,108 +178,120 @@ module {
   };
   public func verifyInvoice(args: ICPVerifyInvoiceArgs) : async T.VerifyInvoiceResult {
     let i = args.invoice;
-    let destination = U.accountIdentifierToText(i.destination);
-    let balanceResult = await balance({account = destination});
-
-    switch(balanceResult){
-      case(#err err){
-        #err(err);
+    let destinationResult = U.accountIdentifierToText({
+      accountIdentifier = i.destination;
+      canisterId = ?args.canisterId;
+    });
+    switch (destinationResult) {
+      case (#err err){
+        return #err({
+          kind = #InvalidAccount;
+          message = ?"Invalid destination account";
+        });
       };
-      case(#ok b){
-        let balance = b.balance;
-        // If balance is less than invoice amount, return error
-        if(balance < i.amount){
-          if(balance != i.amountPaid){
-            let updatedInvoice = {
+      case (#ok destination){
+        let balanceResult = await balance({account = destination});
+        switch(balanceResult){
+          case(#err err){
+            #err(err);
+          };
+          case(#ok b){
+            let balance = b.balance;
+            // If balance is less than invoice amount, return error
+            if(balance < i.amount){
+              if(balance != i.amountPaid){
+                let updatedInvoice = {
+                  id = i.id;
+                  creator = args.caller;
+                  details = i.details;
+                  amount = i.amount;
+                  // Update invoice with latest balance
+                  amountPaid = balance;
+                  token = i.token;
+                  verifiedAtTime = i.verifiedAtTime;
+                  paid = false;
+                  refunded = false;
+                  expiration = i.expiration;
+                  destination = i.destination;
+                  refundAccount = i.refundAccount;
+                };
+              };
+
+              return #err({
+                message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
+                kind = #NotYetPaid;
+              });
+            };
+
+            let verifiedAtTime: ?Time.Time = ?Time.now();
+            // Otherwise, update with latest balance and mark as paid
+            let verifiedInvoice = {
               id = i.id;
               creator = args.caller;
               details = i.details;
               amount = i.amount;
-              // Update invoice with latest balance
+              // update amountPaid
               amountPaid = balance;
               token = i.token;
-              verifiedAtTime = i.verifiedAtTime;
-              paid = false;
+              // update verifiedAtTime
+              verifiedAtTime;
+              refundedAtTime = i.refundedAtTime;
+              // update paid
+              paid = true;
               refunded = false;
               expiration = i.expiration;
               destination = i.destination;
               refundAccount = i.refundAccount;
             };
-          };
 
-          return #err({
-            message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
-            kind = #NotYetPaid;
-          });
-        };
+            // TODO Transfer funds to default subaccount of invoice creator
+            let subaccount: SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
 
-        let verifiedAtTime: ?Time.Time = ?Time.now();
-        // Otherwise, update with latest balance and mark as paid
-        let verifiedInvoice = {
-          id = i.id;
-          creator = args.caller;
-          details = i.details;
-          amount = i.amount;
-          // update amountPaid
-          amountPaid = balance;
-          token = i.token;
-          // update verifiedAtTime
-          verifiedAtTime;
-          refundedAtTime = i.refundedAtTime;
-          // update paid
-          paid = true;
-          refunded = false;
-          expiration = i.expiration;
-          destination = i.destination;
-          refundAccount = i.refundAccount;
-        };
-
-        // TODO Transfer funds to default subaccount of invoice creator
-        let subaccount: SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
-
-        let transferResult = await transfer({
-          memo = 0;
-          fee = {
-            e8s = 10000;
-          };
-          amount = {
-            // Total amount, minus the fee
-            e8s = Nat64.sub(Nat64.fromNat(balance), 10000);
-          };
-          from_subaccount = ?subaccount;
-          to = getDefaultAccount({caller = args.caller; canisterId = args.canisterId});
-          created_at_time = null;
-        });
-        switch (transferResult) {
-          case (#ok result) {
-            return #ok(#Paid {
-              invoice = verifiedInvoice;
+            let transferResult = await transfer({
+              memo = 0;
+              fee = {
+                e8s = 10000;
+              };
+              amount = {
+                // Total amount, minus the fee
+                e8s = Nat64.sub(Nat64.fromNat(balance), 10000);
+              };
+              from_subaccount = ?subaccount;
+              to = getDefaultAccount({caller = args.caller; canisterId = args.canisterId});
+              created_at_time = null;
             });
-          };
-          case (#err err) {
-            switch (err.kind) {
-              case (#BadFee f) {
-                return #err({
-                  message = ?"Bad fee";
-                  kind = #TransferError;
+            switch (transferResult) {
+              case (#ok result) {
+                return #ok(#Paid {
+                  invoice = verifiedInvoice;
                 });
               };
-              case (#InsufficientFunds f) {
-                return #err({
-                  message = ?"Insufficient funds";
-                  kind = #TransferError;
-                });
+              case (#err err) {
+                switch (err.kind) {
+                  case (#BadFee f) {
+                    return #err({
+                      message = ?"Bad fee";
+                      kind = #TransferError;
+                    });
+                  };
+                  case (#InsufficientFunds f) {
+                    return #err({
+                      message = ?"Insufficient funds";
+                      kind = #TransferError;
+                    });
+                  };
+                  case (_) {
+                    return #err({
+                      message = ?"Could not transfer funds to invoice creator.";
+                      kind = #TransferError;
+                    });
+                  }
+                };
               };
-              case (_) {
-                return #err({
-                  message = ?"Could not transfer funds to invoice creator.";
-                  kind = #TransferError;
-                });
-              }
             };
           };
         };
-      };
+      }
     };
   };
 }

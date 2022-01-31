@@ -1,3 +1,4 @@
+import Prim "mo:⛔";
 import T "./Types";
 import A "./Account";
 import Hex "./Hex";
@@ -13,36 +14,98 @@ import Array "mo:base/Array";
 
 module {
   type AccountIdentifier = T.AccountIdentifier;
-  public func accountIdentifierToBlob (identifier: AccountIdentifier) : async Blob {
-    switch identifier {
+
+  /**
+    * args: { accountIdentifier: AccountIdentifier, canisterId : ?Principal }
+    * Takes an account identifier and returns a Blob
+    * 
+    * Canister ID is required only for Principal, and will return an account identifier using that principal as a subaccount for the provided canisterId
+    */
+  public func accountIdentifierToBlob (args: T.AccountIdentifierToBlobArgs) : T.AccountIdentifierToBlobResult {
+    let accountIdentifier = args.accountIdentifier;
+    let canisterId = args.canisterId;
+    let err = {
+      kind = #InvalidAccountIdentifier;
+      message = ?"Invalid account identifier";
+    };
+    switch (accountIdentifier) {
       case(#text(identifier)){
         switch (Hex.decode(identifier)) {
           case(#ok v){
-            return Blob.fromArray(v);
+            let blob = Blob.fromArray(v);
+            if(A.validateAccountIdentifier(blob)){
+              return #ok(blob);
+            } else {
+              return #err(err);
+            }
           };
           case(#err _){
-            throw Error.reject("Invalid hex encoding");
+            return #err(err);
           };
         };
       };
-      case(#principal(identifier)){
-        return Principal.toBlob(identifier);
+      case(#principal principal){
+        switch(canisterId){
+          case (null){
+            return #err({
+              kind = #Other;
+              message = ?"Canister Id is required for account identifiers of type principal";
+            })
+          };
+          case (? id){
+            let identifier = A.accountIdentifier(id, A.principalToSubaccount(principal));
+            Prim.debugPrint(debug_show("Text", Hex.encode(Blob.toArray(identifier))));
+            if(A.validateAccountIdentifier(identifier)){
+              return #ok(identifier);
+            } else {
+              return #err(err);
+            }
+          };
+        }
       };
       case(#blob(identifier)){
-        return identifier;
+        if(A.validateAccountIdentifier(identifier)){
+          return #ok(identifier);
+        } else {
+          return #err(err);
+        }
       };
     };
   };
-  public func accountIdentifierToText (identifier: AccountIdentifier) : Text {
-    switch identifier {
+  /**
+    * args: { accountIdentifier: AccountIdentifier, canisterId : ?Principal }
+    * Takes an account identifier and returns Hex-encoded Text
+    * 
+    * Canister ID is required only for Principal, and will return an account identifier using that principal as a subaccount for the provided canisterId
+    */
+  public func accountIdentifierToText (args: T.AccountIdentifierToTextArgs) : T.AccountIdentifierToTextResult {
+    let accountIdentifier = args.accountIdentifier;
+    let canisterId = args.canisterId;
+    switch (accountIdentifier) {
       case(#text(identifier)){
-        return identifier;
+        return #ok(identifier);
       };
       case(#principal(identifier)){
-        return Principal.toText(identifier);
+        let blobResult = accountIdentifierToBlob(args);
+        switch(blobResult){
+          case(#ok(blob)){
+            return #ok(Hex.encode(Blob.toArray(blob)));
+          };
+          case(#err(err)){
+            return #err(err);
+          };
+        };
       };
       case(#blob(identifier)){
-        return Hex.encode(Blob.toArray(identifier));
+        let blobResult = accountIdentifierToBlob(args);
+        switch(blobResult){
+          case(#ok(blob)){
+            return #ok(Hex.encode(Blob.toArray(blob)));
+          };
+          case(#err(err)){
+            return #err(err);
+          };
+        };
       };
     };
   };
@@ -51,7 +114,12 @@ module {
     caller: Principal;
     id: Nat;
   };
-    // Generate an invoice ID using hashed values from the invoice arguments
+  /** 
+    * Generates a subaccount for the given principal, to be used as an invoice destination. This is a subaccount, not a full accountIdentifier.
+    * 
+    * args: { caller: Principal, id: Nat }
+    * Returns: Principal
+    */
   public func generateInvoiceSubaccount (args: GenerateInvoiceSubaccountArgs) : Blob {
     let idHash = SHA224.Digest();
     // Length of domain separator

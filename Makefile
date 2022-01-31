@@ -1,4 +1,4 @@
-.PHONY: check docs unit-test
+.PHONY: check docs test e2e
 
 check:
 	find src -type f -name '*.mo' -print0 | xargs -0 $(shell vessel bin)/moc $(shell vessel sources) --check
@@ -15,7 +15,7 @@ test:
 	rm -f Test.wasm
 
 e2e:
-	# ./install-local.sh
+	./install-local.sh
 	npm ci
 	npm test
 
