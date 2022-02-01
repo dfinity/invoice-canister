@@ -1,11 +1,11 @@
-import A          "./Account";   
-import Hex        "./Hex";
-import ICP        "./ICPLedger";
-import T          "./Types";
-import U          "./Utils";
+import A          "../../../../src/invoice/Account";   
+import Hex        "../../../../src/invoice/Hex";
+import T          "../../../../src/invoice/Types";
+import U          "../../../../src/invoice/Utils";
 
 import Blob       "mo:base/Blob";
 import Cycles     "mo:base/ExperimentalCycles";
+import Debug      "mo:base/Debug";
 import Hash       "mo:base/Hash";
 import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
@@ -16,7 +16,7 @@ import Principal  "mo:base/Principal";
 import Text       "mo:base/Text";
 import Time       "mo:base/Time";
 
-actor Invoice {
+actor InvoiceMock {
 // #region Types
   type Details = T.Details;
   type Token = T.Token;
@@ -33,6 +33,9 @@ actor Invoice {
   stable var invoiceCounter : Nat = 0;
   stable var entries : [(Nat, Invoice)] = [];
   var invoices: HashMap.HashMap<Nat, Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
+
+  var icpBlockHeight : Nat = 0;
+  var icpLedgerMock : HashMap.HashMap<Blob, Nat> = HashMap.HashMap(16, Blob.equal, Blob.hash);
 // #endregion
 
 /**
@@ -115,7 +118,7 @@ actor Invoice {
     let token = args.token;
     switch(token.symbol){
       case("ICP"){
-        let canisterId = Principal.fromActor(Invoice);
+        let canisterId = Principal.fromActor(InvoiceMock);
 
         let account = U.getICPAccountIdentifier({
           principal = canisterId;
@@ -159,20 +162,20 @@ actor Invoice {
 // #region Get Balance
   public shared ({caller}) func get_balance (args: T.GetBalanceArgs) : async T.GetBalanceResult {
     let token = args.token;
-    let canisterId = Principal.fromActor(Invoice);
+    let canisterId = Principal.fromActor(InvoiceMock);
     switch(token.symbol){
       case("ICP"){
-        let defaultAccount = Hex.encode(Blob.toArray(U.getDefaultAccount({caller; canisterId})));
-        let balance = await ICP.balance({account = defaultAccount});
+        let defaultAccount = U.getDefaultAccount({caller; canisterId});
+        let balance = icpLedgerMock.get(defaultAccount);
         switch(balance){
-          case(#err err){
+          case(null){
             return #err({
               message = ?"Could not get balance";
               kind = #NotFound;
             });
           };
-          case(#ok result){
-            return #ok({balance = result.balance});
+          case(? b){
+            return #ok({balance = b});
           };
         };
       };
@@ -189,7 +192,7 @@ actor Invoice {
 // #region Verify Invoice
   public shared ({caller}) func verify_invoice (args: T.VerifyInvoiceArgs) : async T.VerifyInvoiceResult {
     let invoice = invoices.get(args.id);
-    let canisterId = Principal.fromActor(Invoice);
+    let canisterId = Principal.fromActor(InvoiceMock);
 
     switch(invoice){
       case(null){
@@ -208,23 +211,94 @@ actor Invoice {
 
         switch (i.token.symbol){
           case("ICP"){
-            let result: T.VerifyInvoiceResult = await ICP.verifyInvoice({
-              invoice = i;
-              caller;
-              canisterId;
-            });
-            switch (result){
-              case(#ok value){
-                switch (value){
-                  case(#AlreadyVerified _){};
-                  case(#Paid paidResult){
-                    let replaced = invoices.replace(i.id, paidResult.invoice);
+            let destinationResult = U.accountIdentifierToBlob({
+              accountIdentifier = i.destination;
+              canisterId = ?canisterId;
+              });
+            switch(destinationResult){
+              case(#err err){
+                return #err({
+                  kind = #InvalidAccount;
+                  message = ?"Invalid destination account";
+                });
+              };
+              case (#ok destination){
+                let destinationBalance = icpLedgerMock.get(destination);
+                switch(destinationBalance){
+                  case (null){
+                    return #err({
+                      message = ?"Insufficient balance. Current Balance is 0";
+                      kind = #NotYetPaid;
+                    });
+                  };
+                  case (? balance){
+                    if(balance < i.amount){
+                      let updatedInvoice = {
+                        id = i.id;
+                        creator = i.creator;
+                        details = i.details;
+                        amount = i.amount;
+                        // Update invoice with latest balance
+                        amountPaid = balance;
+                        token = i.token;
+                        verifiedAtTime = i.verifiedAtTime;
+                        paid = false;
+                        refunded = false;
+                        expiration = i.expiration;
+                        destination = i.destination;
+                        refundAccount = i.refundAccount;
+                      };
+                      return #err({
+                        message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
+                        kind = #NotYetPaid;
+                      });
+                    };
+                    let verifiedAtTime: ?Time.Time = ?Time.now();
+                    // Otherwise, update with latest balance and mark as paid
+                    let verifiedInvoice = {
+                      id = i.id;
+                      creator = i.creator;
+                      details = i.details;
+                      amount = i.amount;
+                      // update amountPaid
+                      amountPaid = balance;
+                      token = i.token;
+                      // update verifiedAtTime
+                      verifiedAtTime;
+                      refundedAtTime = i.refundedAtTime;
+                      // update paid
+                      paid = true;
+                      refunded = false;
+                      expiration = i.expiration;
+                      destination = i.destination;
+                      refundAccount = i.refundAccount;
+                    };
+
+                    // TODO Transfer funds to default subaccount of invoice creator
+                    let subaccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
+                    let transfer = await mockICPTransfer({
+                      amount = {
+                        e8s = Nat64.fromNat(balance - 10_000);
+                      };
+                      fee = {
+                        e8s = 10_000;
+                      };
+                      memo = 0;
+                      from_subaccount = ?subaccount;
+                      to = #blob(U.getDefaultAccount({caller; canisterId;}));
+                      token = i.token;
+                      canisterId = ?canisterId;
+                      created_at_time = null;
+                    });
+                    let replaced = invoices.replace(i.id, verifiedInvoice);
+                    return #ok(#Paid({
+                      invoice = verifiedInvoice;
+                    }));
                   };
                 };
+
               };
-              case(#err _){};
-            };
-            return result;
+            }
           };
           case(_){
             return #err({
@@ -240,7 +314,7 @@ actor Invoice {
 
 // #region Refund Invoice
   public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
-    let canisterId = Principal.fromActor(Invoice);
+    let canisterId = Principal.fromActor(InvoiceMock);
     let invoice = invoices.get(args.id);
 
     let accountResult = U.accountIdentifierToBlob({
@@ -273,7 +347,7 @@ actor Invoice {
             };
             switch(i.token.symbol){
               case("ICP"){
-                let transferResult = await ICP.transfer({
+                let transferResult = await mockICPTransfer({
                   memo = 0;
                   fee = {
                     e8s = 10000;
@@ -283,7 +357,7 @@ actor Invoice {
                     e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
                   };
                   from_subaccount = ?A.principalToSubaccount(caller);
-                  to = destination;
+                  to = #blob(destination);
                   created_at_time = null;
                 });
                 switch (transferResult) {
@@ -349,7 +423,7 @@ actor Invoice {
     let token = args.token;
     let accountResult = U.accountIdentifierToBlob({
       accountIdentifier = args.destination;
-      canisterId = ?Principal.fromActor(Invoice);
+      canisterId = ?Principal.fromActor(InvoiceMock);
     });
     switch (accountResult){
       case (#err err){
@@ -364,7 +438,7 @@ actor Invoice {
             let now = Nat64.fromIntWrap(Time.now());
             
 
-            let transferResult = await ICP.transfer({
+            let transferResult = await mockICPTransfer({
               memo = 0;
               fee = {
                 e8s = 10000;
@@ -375,7 +449,7 @@ actor Invoice {
               };
               from_subaccount = ?A.principalToSubaccount(caller);
 
-              to = destination;
+              to = #blob(destination);
               created_at_time = null;
             });
             switch (transferResult) {
@@ -426,7 +500,7 @@ actor Invoice {
     */
   public shared query ({caller}) func get_caller_identifier (args: T.GetCallerIdentifierArgs) : async T.GetCallerIdentifierResult {
     let token = args.token;
-    let canisterId = Principal.fromActor(Invoice);
+    let canisterId = Principal.fromActor(InvoiceMock);
     switch(token.symbol){
       case("ICP"){
         let subaccount = U.getDefaultAccount({caller; canisterId;});
@@ -453,8 +527,64 @@ actor Invoice {
   public func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async T.AccountIdentifierToBlobResult {
     return U.accountIdentifierToBlob({
       accountIdentifier;
-      canisterId = ?Principal.fromActor(Invoice);
+      canisterId = ?Principal.fromActor(InvoiceMock);
     });
+  };
+  
+  func mockICPTransfer (args: T.ICPTransferArgs) : async T.ICPTransferResult {
+    let FEE = 10_000;
+    let amount = args.amount;
+    switch(args.from_subaccount){
+      case(? subaccount){
+        let fromAccount = U.getICPAccountIdentifier({
+          subaccount;
+          principal = Principal.fromActor(InvoiceMock);
+        });
+        let balance = icpLedgerMock.get(fromAccount);
+        switch(balance){
+          case(? b){
+            if(b < Nat64.toNat(amount.e8s) + FEE){
+              Prim.trap("InsufficientFunds");
+            };
+            let newBalance = b - Nat64.toNat(amount.e8s) - FEE;
+            icpLedgerMock.put(fromAccount, newBalance);
+            
+            let destinationResult = U.accountIdentifierToBlob({
+              accountIdentifier = args.to;
+              canisterId = ?Principal.fromActor(InvoiceMock);
+            });
+            switch(destinationResult){
+              case(#err err){
+                switch(err.message){
+                  case (null){
+                    Prim.trap("InvalidDestination");
+                  };
+                  case(? message){
+                    Prim.trap(message);
+                  };
+                }
+              };
+              case (#ok destination){
+                let destinationBalance = icpLedgerMock.get(destination);
+                let newDestinationBalance = newBalance + Nat64.toNat(amount.e8s);
+                icpLedgerMock.put(destination, newDestinationBalance);
+                icpBlockHeight := icpBlockHeight + 1;
+                return #ok({
+                  blockHeight = Nat64.fromNat(icpBlockHeight);
+                });
+
+              };
+            };
+          };
+          case(_){
+            Prim.trap("InsufficientFunds");
+          };
+        };
+      };
+      case(null){
+        Prim.trap("InvalidSubaccount");
+      };
+    };
   };
 // #endregion
 

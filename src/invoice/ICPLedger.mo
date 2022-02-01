@@ -198,22 +198,20 @@ module {
             let balance = b.balance;
             // If balance is less than invoice amount, return error
             if(balance < i.amount){
-              if(balance != i.amountPaid){
-                let updatedInvoice = {
-                  id = i.id;
-                  creator = args.caller;
-                  details = i.details;
-                  amount = i.amount;
-                  // Update invoice with latest balance
-                  amountPaid = balance;
-                  token = i.token;
-                  verifiedAtTime = i.verifiedAtTime;
-                  paid = false;
-                  refunded = false;
-                  expiration = i.expiration;
-                  destination = i.destination;
-                  refundAccount = i.refundAccount;
-                };
+              let updatedInvoice = {
+                id = i.id;
+                creator = args.caller;
+                details = i.details;
+                amount = i.amount;
+                // Update invoice with latest balance
+                amountPaid = balance;
+                token = i.token;
+                verifiedAtTime = i.verifiedAtTime;
+                paid = false;
+                refunded = false;
+                expiration = i.expiration;
+                destination = i.destination;
+                refundAccount = i.refundAccount;
               };
 
               return #err({

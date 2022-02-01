@@ -139,4 +139,21 @@ module {
 
     return blob;
   };
+
+  type DefaultAccountArgs = {
+    // Hex-encoded AccountIdentifier
+    caller : Principal;
+    canisterId : Principal;
+  };
+  public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
+    A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.caller));
+  };
+
+  public type GetICPAccountIdentifierArgs = {
+    principal : Principal;
+    subaccount : T.SubAccount;
+  };
+  public func getICPAccountIdentifier(args: GetICPAccountIdentifierArgs) : Blob {
+    A.accountIdentifier(args.principal, args.subaccount);
+  };
 }
