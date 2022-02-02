@@ -1,0 +1,18 @@
+{
+    "canisters": {
+        "invoice": {
+            "main": "src/mocks/invoice.mo",
+            "type": "motoko"
+        },
+        "seller": {
+            "type": "motoko",
+            "main": "src/seller/main.mo"
+        }
+    },
+    "defaults": {
+        "build": {
+            "packtool": "vessel sources"
+        }
+    },
+    "version": 1
+}

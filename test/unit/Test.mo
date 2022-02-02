@@ -1,12 +1,13 @@
-import A "../../src/invoice/Account";
-import U "../../src/invoice/Utils";
-import Hex "../../src/invoice/Hex";
-import Principal "mo:base/Principal";
-import Debug "mo:base/Debug";
-import Blob "mo:base/Blob";
-import Text "mo:base/Text";
-import Result "mo:base/Result";
-import Prim "mo:⛔";
+import A          "../../src/invoice/Account";
+import Hex        "../../src/invoice/Hex";
+import U          "../../src/invoice/Utils";
+
+import Blob       "mo:base/Blob";
+import Debug      "mo:base/Debug";
+import Prim       "mo:⛔";
+import Principal  "mo:base/Principal";
+import Result     "mo:base/Result";
+import Text       "mo:base/Text";
 
 import ActorSpec "./utils/ActorSpec";
 type Group = ActorSpec.Group;
@@ -79,9 +80,21 @@ let success = run([
           };
         }
       }),
-      skip("should convert a #principal accountIdentifier to Text", do {
-        // TODO - figure out what this behavior is supposed to be
-        assertTrue(true);
+      it("should convert a #principal accountIdentifier to Text", do {
+        let id = #principal(testCaller);
+        let textResult = U.accountIdentifierToText({
+          accountIdentifier = id;
+          canisterId;
+        });
+        switch(textResult){
+          case(#err _) {
+            assertTrue(false);
+          };
+          case(#ok text) {
+            let principalAccount = "333ee20adc61d719820ac133d10f010e531ed8496ffcc439145b3df1982552e7";
+            assertTrue(text == principalAccount);
+          };
+        };
       }),
       it("should convert a #blob accountIdentifier to Text", do {
         let defaultBlob = defaultAccountBlob();
@@ -126,7 +139,6 @@ let success = run([
             assertTrue(false);
           };
           case(#ok blob) {
-            Prim.debugPrint(debug_show("Text", blob));
             let principalAccount = principalAccountBlob();
             assertTrue(blob == principalAccount);
           };

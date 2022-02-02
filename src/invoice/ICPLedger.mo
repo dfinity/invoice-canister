@@ -1,21 +1,20 @@
-import Ledger "canister:ledger";
-import A "./Account";
-import T "./Types";
-import U "./Utils";
-import SHA224 "./SHA224";
-import CRC32     "./CRC32";
-import Hex "./Hex";
-import Nat64 "mo:base/Nat64";
-import Principal "mo:base/Principal";
-import Array "mo:base/Array";
-import Blob "mo:base/Blob";
-import Buffer "mo:base/Buffer";
-import Nat "mo:base/Nat";
-import Debug "mo:base/Debug";
-import Result "mo:base/Result";
-import Option "mo:base/Option";
-import Time "mo:base/Time";
-import Text "mo:base/Text";
+import Ledger     "canister:ledger";
+
+import A          "./Account";
+import CRC32      "./CRC32";
+import Hex        "./Hex";
+import SHA224     "./SHA224";
+import T          "./Types";
+import U          "./Utils";
+
+import Blob       "mo:base/Blob";
+import Nat        "mo:base/Nat";
+import Nat64      "mo:base/Nat64";
+import Option     "mo:base/Option";
+import Principal  "mo:base/Principal";
+import Result     "mo:base/Result";
+import Text       "mo:base/Text";
+import Time       "mo:base/Time";
 
 module {
   public type Memo = Nat64;
@@ -199,22 +198,20 @@ module {
             let balance = b.balance;
             // If balance is less than invoice amount, return error
             if(balance < i.amount){
-              if(balance != i.amountPaid){
-                let updatedInvoice = {
-                  id = i.id;
-                  creator = args.caller;
-                  details = i.details;
-                  amount = i.amount;
-                  // Update invoice with latest balance
-                  amountPaid = balance;
-                  token = i.token;
-                  verifiedAtTime = i.verifiedAtTime;
-                  paid = false;
-                  refunded = false;
-                  expiration = i.expiration;
-                  destination = i.destination;
-                  refundAccount = i.refundAccount;
-                };
+              let updatedInvoice = {
+                id = i.id;
+                creator = args.caller;
+                details = i.details;
+                amount = i.amount;
+                // Update invoice with latest balance
+                amountPaid = balance;
+                token = i.token;
+                verifiedAtTime = i.verifiedAtTime;
+                paid = false;
+                refunded = false;
+                expiration = i.expiration;
+                destination = i.destination;
+                refundAccount = i.refundAccount;
               };
 
               return #err({

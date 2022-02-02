@@ -1,5 +1,5 @@
-import Time "mo:base/Time";
-import Result "mo:base/Result";
+import Result     "mo:base/Result";
+import Time       "mo:base/Time";
 
 module {
 /**
@@ -248,5 +248,46 @@ module {
       #Other;
     };
   };
+// #endregion
+
+// #region ICP Transfer
+  public type Memo = Nat64;
+  public type SubAccount = Blob;
+  public type TimeStamp = {
+    timestamp_nanos: Nat64;
+  };
+  public type ICPTokens = {
+    e8s : Nat64;
+  };
+  public type ICPTransferError = {
+    message: ?Text;
+    kind : {
+      #BadFee: {
+        expected_fee: ICPTokens;
+      };
+      #InsufficientFunds: {
+        balance: ICPTokens;
+      };
+      #TxTooOld: {
+        allowed_window_nanos: Nat64;
+      };
+      #TxCreatedInFuture;
+      #TxDuplicate : {
+        duplicate_of: Nat;
+      };
+      #Other;
+    }
+  };
+
+  public type ICPTransferArgs = {
+    memo: Memo;
+    amount: ICPTokens;
+    fee: ICPTokens;
+    from_subaccount: ?SubAccount;
+    to: AccountIdentifier;
+    created_at_time: ?TimeStamp;
+  };
+
+  public type ICPTransferResult = Result.Result<TransferSuccess, ICPTransferError>;
 // #endregion
 };
