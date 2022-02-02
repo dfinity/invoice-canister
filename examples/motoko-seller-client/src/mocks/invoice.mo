@@ -13,6 +13,7 @@ import Nat        "mo:base/Nat";
 import Nat64      "mo:base/Nat64";
 import Prim       "mo:⛔";
 import Principal  "mo:base/Principal";
+import Result     "mo:base/Result";
 import Text       "mo:base/Text";
 import Time       "mo:base/Time";
 
@@ -546,7 +547,7 @@ actor InvoiceMock {
             if(b < Nat64.toNat(amount.e8s) + FEE){
               Prim.trap("InsufficientFunds");
             };
-            let newBalance = b - Nat64.toNat(amount.e8s) - FEE;
+            let newBalance = Nat.sub(Nat.sub(b, Nat64.toNat(amount.e8s)), FEE);
             icpLedgerMock.put(fromAccount, newBalance);
             
             let destinationResult = U.accountIdentifierToBlob({
@@ -583,6 +584,49 @@ actor InvoiceMock {
       };
       case(null){
         Prim.trap("InvalidSubaccount");
+      };
+    };
+  };
+
+  // Useful for testing
+  type FreeMoneyArgs = {
+    amount: Nat;
+    accountIdentifier: AccountIdentifier;
+  };
+  type FreeMoneyResult = Result.Result<Nat, FreeMoneyError>;
+  type FreeMoneyError = {
+    message: ?Text;
+    kind: {
+      #InvalidDestination;
+    };
+  };
+  public func deposit_free_money (args: FreeMoneyArgs) : async FreeMoneyResult {
+    let amount = args.amount;
+    let accountBlob = U.accountIdentifierToBlob({
+      accountIdentifier = args.accountIdentifier;
+      canisterId = ?Principal.fromActor(InvoiceMock);
+    });
+    
+    switch(accountBlob){
+      case(#err err){
+        return #err({
+          message = err.message;
+          kind = #InvalidDestination;
+        });
+      };
+      case(#ok account){
+        let balanceResult = icpLedgerMock.get(account);
+        switch(balanceResult){
+          case(null){
+            icpLedgerMock.put(account, amount);
+            return #ok(amount);
+          };
+          case (? balance){
+            let newBalance = balance + amount;
+            icpLedgerMock.put(account, newBalance);
+            return #ok(newBalance);
+          };
+        };
       };
     };
   };
