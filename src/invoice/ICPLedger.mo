@@ -224,7 +224,7 @@ module {
             // Otherwise, update with latest balance and mark as paid
             let verifiedInvoice = {
               id = i.id;
-              creator = args.caller;
+              creator = i.creator;
               details = i.details;
               amount = i.amount;
               // update amountPaid
@@ -254,7 +254,7 @@ module {
                 e8s = Nat64.sub(Nat64.fromNat(balance), 10000);
               };
               from_subaccount = ?subaccount;
-              to = getDefaultAccount({caller = args.caller; canisterId = args.canisterId});
+              to = getDefaultAccount({caller = i.creator; canisterId = args.canisterId});
               created_at_time = null;
             });
             switch (transferResult) {

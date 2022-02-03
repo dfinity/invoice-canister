@@ -286,7 +286,7 @@ actor InvoiceMock {
                       };
                       memo = 0;
                       from_subaccount = ?subaccount;
-                      to = #blob(U.getDefaultAccount({caller; canisterId;}));
+                      to = #blob(U.getDefaultAccount({i.creator; canisterId;}));
                       token = i.token;
                       canisterId = ?canisterId;
                       created_at_time = null;
