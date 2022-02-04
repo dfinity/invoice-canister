@@ -142,11 +142,11 @@ module {
 
   type DefaultAccountArgs = {
     // Hex-encoded AccountIdentifier
-    caller : Principal;
     canisterId : Principal;
+    principal : Principal;
   };
   public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
-    A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.caller));
+    A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.principal));
   };
 
   public type GetICPAccountIdentifierArgs = {

@@ -162,7 +162,14 @@ actor Invoice {
     let canisterId = Principal.fromActor(Invoice);
     switch(token.symbol){
       case("ICP"){
-        let defaultAccount = Hex.encode(Blob.toArray(U.getDefaultAccount({caller; canisterId})));
+        let defaultAccount = Hex.encode(
+          Blob.toArray(
+            U.getDefaultAccount({
+              canisterId;
+              principal = caller;
+            })
+         )
+        );
         let balance = await ICP.balance({account = defaultAccount});
         switch(balance){
           case(#err err){
@@ -418,18 +425,19 @@ actor Invoice {
   };
 // #endregion
 
-// #region get_caller_identifier
+// #region get_account_identifier
   /*
     * Get Caller Identifier
-    * Allows a caller to get their own account identifier
+    * Allows a caller to the accountIdentifier for a given principal
     * for a specific token.
     */
-  public shared query ({caller}) func get_caller_identifier (args: T.GetCallerIdentifierArgs) : async T.GetCallerIdentifierResult {
+  public query func get_account_identifier (args: T.GetAccountIdentifierArgs) : async T.GetAccountIdentifierResult {
     let token = args.token;
+    let principal = args.principal;
     let canisterId = Principal.fromActor(Invoice);
     switch(token.symbol){
       case("ICP"){
-        let subaccount = U.getDefaultAccount({caller; canisterId;});
+        let subaccount = U.getDefaultAccount({principal; canisterId;});
         let hexEncoded = Hex.encode(
           Blob.toArray(subaccount)
         );

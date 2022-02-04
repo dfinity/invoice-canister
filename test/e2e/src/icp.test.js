@@ -1,5 +1,5 @@
 const identityUtils = require("./utils/identity");
-const { defaultActor, balanceHolder } = identityUtils;
+const { defaultActor, defaultIdentity, balanceHolder } = identityUtils;
 
 const encoder = new TextEncoder();
 
@@ -73,11 +73,12 @@ describe("ICP Tests", () => {
       });
       expect(balanceResult).toStrictEqual({ ok: { balance: 0n } });
     });
-    it("should fetch the account of the caller", async () => {
-      let identifier = await defaultActor.get_caller_identifier({
+    it("should fetch the account of the different principals", async () => {
+      let identifier = await defaultActor.get_account_identifier({
         token: {
           symbol: "ICP",
         },
+        principal: defaultIdentity.getPrincipal(),
       });
       if ("ok" in identifier) {
         expect(identifier.ok.accountIdentifier).toStrictEqual({
@@ -213,8 +214,9 @@ describe("ICP Tests", () => {
   describe("Transfer Tests", () => {
     it("should increase a caller's icp balance after transferring to that account", async () => {
       resetBalance(); //?
-      let destination = await defaultActor.get_caller_identifier({
+      let destination = await defaultActor.get_account_identifier({
         token: { symbol: "ICP" },
+        principal: defaultIdentity.getPrincipal(),
       });
       let transferResult = await balanceHolder.transfer({
         amount: 1000000n,

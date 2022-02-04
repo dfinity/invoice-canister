@@ -175,14 +175,15 @@ module {
 // #endregion
 
 // #region get_caller_identifier
-  public type GetCallerIdentifierArgs = {
+  public type GetAccountIdentifierArgs = {
     token : Token;
+    principal : Principal;
   };
-  public type GetCallerIdentifierResult = Result.Result<GetCallerIdentifierSuccess, GetCallerIdentifierErr>;
-  public type GetCallerIdentifierSuccess = {
+  public type GetAccountIdentifierResult = Result.Result<GetAccountIdentifierSuccess, GetAccountIdentifierErr>;
+  public type GetAccountIdentifierSuccess = {
     accountIdentifier: AccountIdentifier;
   };
-  public type GetCallerIdentifierErr = {
+  public type GetAccountIdentifierErr = {
     message: ?Text; 
     kind: {
       #InvalidToken;

@@ -166,7 +166,10 @@ actor InvoiceMock {
     let canisterId = Principal.fromActor(InvoiceMock);
     switch(token.symbol){
       case("ICP"){
-        let defaultAccount = U.getDefaultAccount({caller; canisterId});
+        let defaultAccount = U.getDefaultAccount({
+          canisterId;
+          principal = caller;
+        });
         let balance = icpLedgerMock.get(defaultAccount);
         switch(balance){
           case(null){
@@ -286,7 +289,10 @@ actor InvoiceMock {
                       };
                       memo = 0;
                       from_subaccount = ?subaccount;
-                      to = #blob(U.getDefaultAccount({i.creator; canisterId;}));
+                      to = #blob(U.getDefaultAccount({
+                        canisterId;
+                        principal = i.creator;
+                      }));
                       token = i.token;
                       canisterId = ?canisterId;
                       created_at_time = null;
@@ -493,18 +499,19 @@ actor InvoiceMock {
   };
 // #endregion
 
-// #region get_caller_identifier
+// #region get_account_identifier
   /*
     * Get Caller Identifier
-    * Allows a caller to get their own account identifier
+    * Allows a caller to the accountIdentifier for a given principal
     * for a specific token.
     */
-  public shared query ({caller}) func get_caller_identifier (args: T.GetCallerIdentifierArgs) : async T.GetCallerIdentifierResult {
+  public query func get_account_identifier (args: T.GetAccountIdentifierArgs) : async T.GetAccountIdentifierResult {
     let token = args.token;
+    let principal = args.principal;
     let canisterId = Principal.fromActor(InvoiceMock);
     switch(token.symbol){
       case("ICP"){
-        let subaccount = U.getDefaultAccount({caller; canisterId;});
+        let subaccount = U.getDefaultAccount({principal; canisterId;});
         let hexEncoded = Hex.encode(
           Blob.toArray(subaccount)
         );

@@ -27,18 +27,22 @@ const parseIdentity = (keyPath) => {
 
 const { createActor } = declarations;
 
+const defaultIdentity = parseIdentity("test-ec-secp256k1-priv-key.pem");
 const defaultActor = createActor(canisterId, {
   agentOptions: {
-    identity: parseIdentity("test-ec-secp256k1-priv-key.pem"),
+    identity: defaultIdentity,
     fetch,
     host: "http://localhost:8000",
   },
 });
 
 // Account that will receive a large balance of ICP for testing from install.sh
+const balanceHolderIdentity = parseIdentity(
+  "test-ec-secp256k1-priv-key-balanceholder.pem"
+);
 const balanceHolder = createActor(canisterId, {
   agentOptions: {
-    identity: parseIdentity("test-ec-secp256k1-priv-key-balanceholder.pem"),
+    identity: balanceHolderIdentity,
     fetch,
     host: "http://localhost:8000",
   },
@@ -46,5 +50,7 @@ const balanceHolder = createActor(canisterId, {
 
 module.exports = {
   defaultActor,
+  defaultIdentity,
   balanceHolder,
+  balanceHolderIdentity,
 };
