@@ -4,6 +4,18 @@ export const idlFactory = ({ IDL }) => {
     'blob' : IDL.Vec(IDL.Nat8),
     'text' : IDL.Text,
   });
+  const AccountIdentifierToBlobSuccess = IDL.Vec(IDL.Nat8);
+  const AccountIdentifierToBlobErr = IDL.Record({
+    'kind' : IDL.Variant({
+      'InvalidAccountIdentifier' : IDL.Null,
+      'Other' : IDL.Null,
+    }),
+    'message' : IDL.Opt(IDL.Text),
+  });
+  const AccountIdentifierToBlobResult = IDL.Variant({
+    'ok' : AccountIdentifierToBlobSuccess,
+    'err' : AccountIdentifierToBlobErr,
+  });
   const Token = IDL.Record({ 'symbol' : IDL.Text });
   const Details = IDL.Record({
     'meta' : IDL.Vec(IDL.Nat8),
@@ -55,6 +67,21 @@ export const idlFactory = ({ IDL }) => {
     'ok' : CreateInvoiceSuccess,
     'err' : CreateInvoiceErr,
   });
+  const GetAccountIdentifierArgs = IDL.Record({
+    'principal' : IDL.Principal,
+    'token' : Token,
+  });
+  const GetAccountIdentifierSuccess = IDL.Record({
+    'accountIdentifier' : AccountIdentifier,
+  });
+  const GetAccountIdentifierErr = IDL.Record({
+    'kind' : IDL.Variant({ 'InvalidToken' : IDL.Null, 'Other' : IDL.Null }),
+    'message' : IDL.Opt(IDL.Text),
+  });
+  const GetAccountIdentifierResult = IDL.Variant({
+    'ok' : GetAccountIdentifierSuccess,
+    'err' : GetAccountIdentifierErr,
+  });
   const GetBalanceArgs = IDL.Record({ 'token' : Token });
   const GetBalanceSuccess = IDL.Record({ 'balance' : IDL.Nat });
   const GetBalanceErr = IDL.Record({
@@ -68,18 +95,6 @@ export const idlFactory = ({ IDL }) => {
   const GetBalanceResult = IDL.Variant({
     'ok' : GetBalanceSuccess,
     'err' : GetBalanceErr,
-  });
-  const GetCallerIdentifierArgs = IDL.Record({ 'token' : Token });
-  const GetCallerIdentifierSuccess = IDL.Record({
-    'accountIdentifier' : AccountIdentifier,
-  });
-  const GetCallerIdentifierErr = IDL.Record({
-    'kind' : IDL.Variant({ 'InvalidToken' : IDL.Null, 'Other' : IDL.Null }),
-    'message' : IDL.Opt(IDL.Text),
-  });
-  const GetCallerIdentifierResult = IDL.Variant({
-    'ok' : GetCallerIdentifierSuccess,
-    'err' : GetCallerIdentifierErr,
   });
   const GetInvoiceArgs = IDL.Record({ 'id' : IDL.Nat });
   const GetInvoiceSuccess = IDL.Record({ 'invoice' : Invoice });
@@ -165,16 +180,16 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     'accountIdentifierToBlob' : IDL.Func(
         [AccountIdentifier__1],
-        [IDL.Vec(IDL.Nat8)],
+        [AccountIdentifierToBlobResult],
         [],
       ),
     'create_invoice' : IDL.Func([CreateInvoiceArgs], [CreateInvoiceResult], []),
-    'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),
-    'get_caller_identifier' : IDL.Func(
-        [GetCallerIdentifierArgs],
-        [GetCallerIdentifierResult],
+    'get_account_identifier' : IDL.Func(
+        [GetAccountIdentifierArgs],
+        [GetAccountIdentifierResult],
         ['query'],
       ),
+    'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),
     'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], []),
     'refund_invoice' : IDL.Func([RefundInvoiceArgs], [RefundInvoiceResult], []),
     'remaining_cycles' : IDL.Func([], [IDL.Nat], ['query']),

@@ -117,22 +117,6 @@ type GetInvoiceErr =
    message: opt text;
  };
 type GetInvoiceArgs = record {id: nat;};
-type GetCallerIdentifierSuccess = record {
-                                    accountIdentifier: AccountIdentifier;};
-type GetCallerIdentifierResult = 
- variant {
-   err: GetCallerIdentifierErr;
-   ok: GetCallerIdentifierSuccess;
- };
-type GetCallerIdentifierErr = 
- record {
-   kind: variant {
-           InvalidToken;
-           Other;
-         };
-   message: opt text;
- };
-type GetCallerIdentifierArgs = record {token: Token;};
 type GetBalanceSuccess = record {balance: nat;};
 type GetBalanceResult = 
  variant {
@@ -149,6 +133,26 @@ type GetBalanceErr =
    message: opt text;
  };
 type GetBalanceArgs = record {token: Token;};
+type GetAccountIdentifierSuccess = record {
+                                     accountIdentifier: AccountIdentifier;};
+type GetAccountIdentifierResult = 
+ variant {
+   err: GetAccountIdentifierErr;
+   ok: GetAccountIdentifierSuccess;
+ };
+type GetAccountIdentifierErr = 
+ record {
+   kind: variant {
+           InvalidToken;
+           Other;
+         };
+   message: opt text;
+ };
+type GetAccountIdentifierArgs = 
+ record {
+   "principal": principal;
+   token: Token;
+ };
 type Details = 
  record {
    description: text;
@@ -184,6 +188,20 @@ type AccountIdentifier__1 =
    "principal": principal;
    "text": text;
  };
+type AccountIdentifierToBlobSuccess = blob;
+type AccountIdentifierToBlobResult = 
+ variant {
+   err: AccountIdentifierToBlobErr;
+   ok: AccountIdentifierToBlobSuccess;
+ };
+type AccountIdentifierToBlobErr = 
+ record {
+   kind: variant {
+           InvalidAccountIdentifier;
+           Other;
+         };
+   message: opt text;
+ };
 type AccountIdentifier = 
  variant {
    "blob": blob;
@@ -191,11 +209,12 @@ type AccountIdentifier =
    "text": text;
  };
 service : {
-  accountIdentifierToBlob: (AccountIdentifier__1) -> (blob);
+  accountIdentifierToBlob: (AccountIdentifier__1) ->
+   (AccountIdentifierToBlobResult);
   create_invoice: (CreateInvoiceArgs) -> (CreateInvoiceResult);
+  get_account_identifier: (GetAccountIdentifierArgs) ->
+   (GetAccountIdentifierResult) query;
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
-  get_caller_identifier: (GetCallerIdentifierArgs) ->
-   (GetCallerIdentifierResult) query;
   get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult);
   refund_invoice: (RefundInvoiceArgs) -> (RefundInvoiceResult);
   remaining_cycles: () -> (nat) query;

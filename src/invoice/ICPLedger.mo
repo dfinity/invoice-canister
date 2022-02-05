@@ -153,15 +153,6 @@ module {
     };
   };
 
-  type DefaultAccountArgs = {
-    // Hex-encoded AccountIdentifier
-    caller : Principal;
-    canisterId : Principal;
-  };
-  public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
-    A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.caller));
-  };
-
   public type GetICPAccountIdentifierArgs = {
     principal : Principal;
     subaccount : SubAccount;
@@ -254,7 +245,10 @@ module {
                 e8s = Nat64.sub(Nat64.fromNat(balance), 10000);
               };
               from_subaccount = ?subaccount;
-              to = getDefaultAccount({caller = i.creator; canisterId = args.canisterId});
+              to = U.getDefaultAccount({
+                canisterId = args.canisterId;
+                principal = i.creator;
+              });
               created_at_time = null;
             });
             switch (transferResult) {

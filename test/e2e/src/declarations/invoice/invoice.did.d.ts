@@ -2,6 +2,16 @@ import type { Principal } from '@dfinity/principal';
 export type AccountIdentifier = { 'principal' : Principal } |
   { 'blob' : Array<number> } |
   { 'text' : string };
+export interface AccountIdentifierToBlobErr {
+  'kind' : { 'InvalidAccountIdentifier' : null } |
+    { 'Other' : null },
+  'message' : [] | [string],
+}
+export type AccountIdentifierToBlobResult = {
+    'ok' : AccountIdentifierToBlobSuccess
+  } |
+  { 'err' : AccountIdentifierToBlobErr };
+export type AccountIdentifierToBlobSuccess = Array<number>;
 export type AccountIdentifier__1 = { 'principal' : Principal } |
   { 'blob' : Array<number> } |
   { 'text' : string };
@@ -22,6 +32,22 @@ export type CreateInvoiceResult = { 'ok' : CreateInvoiceSuccess } |
   { 'err' : CreateInvoiceErr };
 export interface CreateInvoiceSuccess { 'invoice' : Invoice }
 export interface Details { 'meta' : Array<number>, 'description' : string }
+export interface GetAccountIdentifierArgs {
+  'principal' : Principal,
+  'token' : Token,
+}
+export interface GetAccountIdentifierErr {
+  'kind' : { 'InvalidToken' : null } |
+    { 'Other' : null },
+  'message' : [] | [string],
+}
+export type GetAccountIdentifierResult = {
+    'ok' : GetAccountIdentifierSuccess
+  } |
+  { 'err' : GetAccountIdentifierErr };
+export interface GetAccountIdentifierSuccess {
+  'accountIdentifier' : AccountIdentifier,
+}
 export interface GetBalanceArgs { 'token' : Token }
 export interface GetBalanceErr {
   'kind' : { 'NotFound' : null } |
@@ -32,17 +58,6 @@ export interface GetBalanceErr {
 export type GetBalanceResult = { 'ok' : GetBalanceSuccess } |
   { 'err' : GetBalanceErr };
 export interface GetBalanceSuccess { 'balance' : bigint }
-export interface GetCallerIdentifierArgs { 'token' : Token }
-export interface GetCallerIdentifierErr {
-  'kind' : { 'InvalidToken' : null } |
-    { 'Other' : null },
-  'message' : [] | [string],
-}
-export type GetCallerIdentifierResult = { 'ok' : GetCallerIdentifierSuccess } |
-  { 'err' : GetCallerIdentifierErr };
-export interface GetCallerIdentifierSuccess {
-  'accountIdentifier' : AccountIdentifier,
-}
 export interface GetInvoiceArgs { 'id' : bigint }
 export interface GetInvoiceErr {
   'kind' : { 'NotFound' : null } |
@@ -130,13 +145,13 @@ export type VerifyInvoiceSuccess = { 'Paid' : { 'invoice' : Invoice } } |
   { 'AlreadyVerified' : { 'invoice' : Invoice } };
 export interface _SERVICE {
   'accountIdentifierToBlob' : (arg_0: AccountIdentifier__1) => Promise<
-      Array<number>
+      AccountIdentifierToBlobResult
     >,
   'create_invoice' : (arg_0: CreateInvoiceArgs) => Promise<CreateInvoiceResult>,
-  'get_balance' : (arg_0: GetBalanceArgs) => Promise<GetBalanceResult>,
-  'get_caller_identifier' : (arg_0: GetCallerIdentifierArgs) => Promise<
-      GetCallerIdentifierResult
+  'get_account_identifier' : (arg_0: GetAccountIdentifierArgs) => Promise<
+      GetAccountIdentifierResult
     >,
+  'get_balance' : (arg_0: GetBalanceArgs) => Promise<GetBalanceResult>,
   'get_invoice' : (arg_0: GetInvoiceArgs) => Promise<GetInvoiceResult>,
   'refund_invoice' : (arg_0: RefundInvoiceArgs) => Promise<RefundInvoiceResult>,
   'remaining_cycles' : () => Promise<bigint>,
