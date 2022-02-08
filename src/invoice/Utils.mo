@@ -9,7 +9,6 @@ import Blob       "mo:base/Blob";
 import Buffer     "mo:base/Buffer";
 import Error      "mo:base/Error";
 import Nat8       "mo:base/Nat8";
-import Prim       "mo:⛔";
 import Principal  "mo:base/Principal";
 import Text       "mo:base/Text";
 
@@ -55,7 +54,6 @@ module {
           };
           case (? id){
             let identifier = A.accountIdentifier(id, A.principalToSubaccount(principal));
-            Prim.debugPrint(debug_show("Text", Hex.encode(Blob.toArray(identifier))));
             if(A.validateAccountIdentifier(identifier)){
               return #ok(identifier);
             } else {
