@@ -7,58 +7,58 @@ module {
 */
 // #region Base Types
   public type Token = {
-    symbol: Text;
+    symbol : Text;
   };
   public type TokenVerbose = {
-    symbol: Text;
-    decimals: Int;
-    meta: ?{
-      Issuer: Text;
+    symbol : Text;
+    decimals : Int;
+    meta : ?{
+      Issuer : Text;
     };
   };
   public type AccountIdentifier = {
-    #text: Text;
-    #principal: Principal;
-    #blob: Blob;
+    #text : Text;
+    #principal : Principal;
+    #blob : Blob;
   };
   public type Details = {
-    description: Text;
-    meta: Blob;
+    description : Text;
+    meta : Blob;
   };
   public type Invoice = {
-    id: Nat;
-    creator: Principal;
-    details: ?Details;
-    amount: Nat;
-    amountPaid: Nat;
-    token: TokenVerbose;
-    verifiedAtTime: ?Time.Time;
-    refundedAtTime: ?Time.Time;
-    paid: Bool;
-    refunded: Bool;
-    expiration: Time.Time;
-    destination: AccountIdentifier;
-    refundAccount: ?AccountIdentifier;
+    id : Nat;
+    creator : Principal;
+    details : ?Details;
+    amount : Nat;
+    amountPaid : Nat;
+    token : TokenVerbose;
+    verifiedAtTime : ?Time.Time;
+    refundedAtTime : ?Time.Time;
+    paid : Bool;
+    refunded : Bool;
+    expiration : Time.Time;
+    destination : AccountIdentifier;
+    refundAccount : ?AccountIdentifier;
   };
 // #endregion
 
 /**
 * Service Args and Result Types
-*/  
+*/
 
 // #region create_invoice
   public type CreateInvoiceArgs = {
-    amount: Nat;
-    token: Token;
-    details: ?Details;
+    amount : Nat;
+    token : Token;
+    details : ?Details;
   };
   public type CreateInvoiceResult = Result.Result<CreateInvoiceSuccess, CreateInvoiceErr>;
   public type CreateInvoiceSuccess = {
-    invoice: Invoice;
+    invoice : Invoice;
   };
   public type CreateInvoiceErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidToken;
       #InvalidAmount;
       #InvalidDestination;
@@ -76,11 +76,11 @@ module {
   };
   public type GetDestinationAccountIdentifierResult = Result.Result<GetDestinationAccountIdentifierSuccess, GetDestinationAccountIdentifierErr>;
   public type GetDestinationAccountIdentifierSuccess = {
-    accountIdentifier: AccountIdentifier;
+    accountIdentifier : AccountIdentifier;
   };
   public type GetDestinationAccountIdentifierErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
         #InvalidToken;
         #InvalidInvoiceId;
         #Other;
@@ -90,15 +90,15 @@ module {
 
 // #region get_invoice
   public type GetInvoiceArgs = {
-    id: Nat;
+    id : Nat;
   };
   public type GetInvoiceResult = Result.Result<GetInvoiceSuccess, GetInvoiceErr>;
   public type GetInvoiceSuccess = {
-    invoice: Invoice;
+    invoice : Invoice;
   };
   public type GetInvoiceErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidInvoiceId;
       #NotFound;
       #Other;
@@ -108,15 +108,15 @@ module {
 
 // #region get_balance
   public type GetBalanceArgs = {
-    token: Token;
+    token : Token;
   };
   public type GetBalanceResult = Result.Result<GetBalanceSuccess, GetBalanceErr>;
   public type GetBalanceSuccess = {
-    balance: Nat;
+    balance : Nat;
   };
   public type GetBalanceErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidToken;
       #NotFound;
       #Other;
@@ -126,20 +126,20 @@ module {
 
 // #region verify_invoice
   public type VerifyInvoiceArgs = {
-    id: Nat;
+    id : Nat;
   };
   public type VerifyInvoiceResult = Result.Result<VerifyInvoiceSuccess, VerifyInvoiceErr>;
   public type VerifyInvoiceSuccess = {
-    #Paid: {
-      invoice: Invoice;
+    #Paid : {
+      invoice : Invoice;
     };
-    #AlreadyVerified: {
-      invoice: Invoice;
+    #AlreadyVerified : {
+      invoice : Invoice;
     };
   };
   type VerifyInvoiceErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidInvoiceId;
       #NotFound;
       #NotYetPaid;
@@ -154,17 +154,17 @@ module {
 
 // #region transfer
   public type TransferArgs = {
-    amount: Nat;
-    token: Token;
-    destination: AccountIdentifier;
+    amount : Nat;
+    token : Token;
+    destination : AccountIdentifier;
   };
   public type TransferResult = Result.Result<TransferSuccess, TransferError>;
   public type TransferSuccess = {
-    blockHeight: Nat64;
+    blockHeight : Nat64;
   };
   public type TransferError = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #BadFee;
       #InsufficientFunds;
       #InvalidToken;
@@ -181,11 +181,11 @@ module {
   };
   public type GetAccountIdentifierResult = Result.Result<GetAccountIdentifierSuccess, GetAccountIdentifierErr>;
   public type GetAccountIdentifierSuccess = {
-    accountIdentifier: AccountIdentifier;
+    accountIdentifier : AccountIdentifier;
   };
   public type GetAccountIdentifierErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidToken;
       #Other;
     };
@@ -194,17 +194,17 @@ module {
 
 // #region refund_invoice
   public type RefundInvoiceArgs = {
-    id: Nat;
-    refundAccount: AccountIdentifier;
-    amount: Nat;
+    id : Nat;
+    refundAccount : AccountIdentifier;
+    amount : Nat;
   };
   public type RefundInvoiceResult = Result.Result<RefundInvoiceSuccess, RefundInvoiceErr>;
   public type RefundInvoiceSuccess = {
-    blockHeight: Nat64;
+    blockHeight : Nat64;
   };
   public type RefundInvoiceErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidInvoiceId;
       #NotFound;
       #NotYetPaid;
@@ -221,14 +221,14 @@ module {
 
 // #region accountIdentifierToBlob
   public type AccountIdentifierToBlobArgs = {
-    accountIdentifier: AccountIdentifier;
-    canisterId: ?Principal;
+    accountIdentifier : AccountIdentifier;
+    canisterId : ?Principal;
   };
   public type AccountIdentifierToBlobResult = Result.Result<AccountIdentifierToBlobSuccess, AccountIdentifierToBlobErr>;
   public type AccountIdentifierToBlobSuccess = Blob;
   public type AccountIdentifierToBlobErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidAccountIdentifier;
       #Other;
     };
@@ -237,14 +237,14 @@ module {
 
 // #region accountIdentifierToText
   public type AccountIdentifierToTextArgs = {
-    accountIdentifier: AccountIdentifier;
-    canisterId: ?Principal;
+    accountIdentifier : AccountIdentifier;
+    canisterId : ?Principal;
   };
   public type AccountIdentifierToTextResult = Result.Result<AccountIdentifierToTextSuccess, AccountIdentifierToTextErr>;
   public type AccountIdentifierToTextSuccess = Text;
   public type AccountIdentifierToTextErr = {
-    message: ?Text; 
-    kind: {
+    message : ?Text;
+    kind : {
       #InvalidAccountIdentifier;
       #Other;
     };
@@ -255,38 +255,38 @@ module {
   public type Memo = Nat64;
   public type SubAccount = Blob;
   public type TimeStamp = {
-    timestamp_nanos: Nat64;
+    timestamp_nanos : Nat64;
   };
   public type ICPTokens = {
     e8s : Nat64;
   };
   public type ICPTransferError = {
-    message: ?Text;
+    message : ?Text;
     kind : {
-      #BadFee: {
-        expected_fee: ICPTokens;
+      #BadFee : {
+        expected_fee : ICPTokens;
       };
-      #InsufficientFunds: {
-        balance: ICPTokens;
+      #InsufficientFunds : {
+        balance : ICPTokens;
       };
-      #TxTooOld: {
-        allowed_window_nanos: Nat64;
+      #TxTooOld : {
+        allowed_window_nanos : Nat64;
       };
       #TxCreatedInFuture;
       #TxDuplicate : {
-        duplicate_of: Nat;
+        duplicate_of : Nat;
       };
       #Other;
     }
   };
 
   public type ICPTransferArgs = {
-    memo: Memo;
-    amount: ICPTokens;
-    fee: ICPTokens;
-    from_subaccount: ?SubAccount;
-    to: AccountIdentifier;
-    created_at_time: ?TimeStamp;
+    memo : Memo;
+    amount : ICPTokens;
+    fee : ICPTokens;
+    from_subaccount : ?SubAccount;
+    to : AccountIdentifier;
+    created_at_time : ?TimeStamp;
   };
 
   public type ICPTransferResult = Result.Result<TransferSuccess, ICPTransferError>;
