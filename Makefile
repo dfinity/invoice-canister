@@ -11,8 +11,7 @@ docs:
 	$(shell vessel bin)/mo-doc
 
 test:
-	moc $(shell vessel sources) -wasi-system-api -o Test.wasm test/unit/Test.mo && wasmtime Test.wasm
-	rm -f Test.wasm
+	moc -r $(shell vessel sources) -wasi-system-api test/unit/Test.mo
 
 e2e:
 	./install-local.sh

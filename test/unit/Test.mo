@@ -4,7 +4,6 @@ import U          "../../src/invoice/Utils";
 
 import Blob       "mo:base/Blob";
 import Debug      "mo:base/Debug";
-import Prim       "mo:⛔";
 import Principal  "mo:base/Principal";
 import Result     "mo:base/Result";
 import Text       "mo:base/Text";
@@ -192,5 +191,5 @@ let success = run([
 ]);
 
 if(success == false){
-  Prim.trap("Tests failed");
+  Debug.trap("Tests failed");
 }

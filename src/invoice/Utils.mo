@@ -9,7 +9,6 @@ import Blob       "mo:base/Blob";
 import Buffer     "mo:base/Buffer";
 import Error      "mo:base/Error";
 import Nat8       "mo:base/Nat8";
-import Debug      "mo:base/Debug";
 import Principal  "mo:base/Principal";
 import Text       "mo:base/Text";
 
@@ -55,8 +54,6 @@ module {
           };
           case (? id){
             let identifier = A.accountIdentifier(id, A.principalToSubaccount(principal));
-            // TODO: delete
-            Debug.print(debug_show("Text", Hex.encode(Blob.toArray(identifier))));
             if(A.validateAccountIdentifier(identifier)){
               #ok(identifier);
             } else {

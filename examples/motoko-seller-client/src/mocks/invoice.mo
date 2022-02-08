@@ -11,7 +11,6 @@ import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
 import Nat        "mo:base/Nat";
 import Nat64      "mo:base/Nat64";
-import Prim       "mo:⛔";
 import Principal  "mo:base/Principal";
 import Result     "mo:base/Result";
 import Text       "mo:base/Text";
@@ -552,7 +551,7 @@ actor InvoiceMock {
         switch(balance){
           case(? b){
             if(b < Nat64.toNat(amount.e8s) + FEE){
-              Prim.trap("InsufficientFunds");
+              Debug.trap("InsufficientFunds");
             };
             let newBalance = Nat.sub(Nat.sub(b, Nat64.toNat(amount.e8s)), FEE);
             icpLedgerMock.put(fromAccount, newBalance);
@@ -565,10 +564,10 @@ actor InvoiceMock {
               case(#err err){
                 switch(err.message){
                   case (null){
-                    Prim.trap("InvalidDestination");
+                    Debug.trap("InvalidDestination");
                   };
                   case(? message){
-                    Prim.trap(message);
+                    Debug.trap(message);
                   };
                 }
               };
@@ -585,12 +584,12 @@ actor InvoiceMock {
             };
           };
           case(_){
-            Prim.trap("InsufficientFunds");
+            Debug.trap("InsufficientFunds");
           };
         };
       };
       case(null){
-        Prim.trap("InvalidSubaccount");
+        Debug.trap("InvalidSubaccount");
       };
     };
   };
