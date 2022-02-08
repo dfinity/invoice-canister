@@ -31,7 +31,8 @@ actor Invoice {
 // #region State
   stable var invoiceCounter : Nat = 0;
   stable var entries : [(Nat, Invoice)] = [];
-  var invoices : HashMap.HashMap<Nat, Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
+  let invoices : HashMap.HashMap<Nat, Invoice> = HashMap.fromIter(Iter.fromArray(entries), entries.size(), Nat.equal, Hash.hash);
+  entries := [];
 // #endregion
 
 /**
@@ -470,9 +471,5 @@ actor Invoice {
       entries := Iter.toArray(invoices.entries());
   };
 
-  system func postupgrade() {
-      invoices := HashMap.fromIter(Iter.fromArray(entries), 16, Nat.equal, Hash.hash);
-      entries := [];
-  };
 // #endregion
 }
