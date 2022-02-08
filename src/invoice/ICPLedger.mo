@@ -63,14 +63,7 @@ module {
   public type TransferResult = Result.Result<T.TransferSuccess, TransferError>;
 
   public func transfer (args : TransferArgs) : async TransferResult {
-    let result = await Ledger.transfer({
-      memo = args.memo;
-      amount = args.amount;
-      fee = args.fee;
-      from_subaccount = args.from_subaccount;
-      to = args.to;
-      created_at_time = args.created_at_time;
-    });
+    let result = await Ledger.transfer(args);
     switch (result){
       case (#Ok index){
         #ok({blockHeight = index});
