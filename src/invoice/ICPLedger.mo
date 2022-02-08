@@ -10,7 +10,6 @@ import U          "./Utils";
 import Blob       "mo:base/Blob";
 import Nat        "mo:base/Nat";
 import Nat64      "mo:base/Nat64";
-import Option     "mo:base/Option";
 import Principal  "mo:base/Principal";
 import Result     "mo:base/Result";
 import Text       "mo:base/Text";
@@ -82,21 +81,21 @@ module {
           case (#BadFee kind){
             let expected_fee = kind.expected_fee;
             #err({
-              message = Option.make("Bad Fee. Expected fee of " # Nat64.toText(expected_fee.e8s) # " but got " # Nat64.toText(args.fee.e8s));
+              message = ?("Bad Fee. Expected fee of " # Nat64.toText(expected_fee.e8s) # " but got " # Nat64.toText(args.fee.e8s));
               kind = #BadFee({expected_fee});
             });
           };
           case (#InsufficientFunds kind){
             let balance = kind.balance;
             #err({
-              message = Option.make("Insufficient balance. Current balance is " # Nat64.toText(balance.e8s));
+              message = ?("Insufficient balance. Current balance is " # Nat64.toText(balance.e8s));
               kind = #InsufficientFunds({balance});
             })
           };
           case (#TxTooOld kind){
             let allowed_window_nanos = kind.allowed_window_nanos;
             #err({
-              message = Option.make("Error - Tx Too Old. Allowed window of " # Nat64.toText(allowed_window_nanos));
+              message = ?("Error - Tx Too Old. Allowed window of " # Nat64.toText(allowed_window_nanos));
               kind = #TxTooOld({allowed_window_nanos});
             })
           };
@@ -109,7 +108,7 @@ module {
           case (#TxDuplicate kind){
             let duplicate_of = kind.duplicate_of;
             #err({
-              message = Option.make("Error - Duplicate transaction. Duplicate of " # Nat64.toText(duplicate_of));
+              message = ?("Error - Duplicate transaction. Duplicate of " # Nat64.toText(duplicate_of));
               kind = #TxDuplicate({duplicate_of});
             })
           };
