@@ -24,7 +24,7 @@ module {
   };
 
   public type TimeStamp = {
-    timestamp_nanos: Nat64;
+    timestamp_nanos : Nat64;
   };
 
   public type AccountIdentifier = Blob;
@@ -34,37 +34,37 @@ module {
   public type BlockIndex = Nat64;
 
   public type TransferError = {
-    message: ?Text;
+    message : ?Text;
     kind : {
-      #BadFee: {
-        expected_fee: Tokens;
+      #BadFee : {
+        expected_fee : Tokens;
       };
-      #InsufficientFunds: {
-        balance: Tokens;
+      #InsufficientFunds : {
+        balance : Tokens;
       };
-      #TxTooOld: {
-        allowed_window_nanos: Nat64;
+      #TxTooOld : {
+        allowed_window_nanos : Nat64;
       };
       #TxCreatedInFuture;
       #TxDuplicate : {
-        duplicate_of: BlockIndex;
+        duplicate_of : BlockIndex;
       };
       #Other;
     }
   };
 
   public type TransferArgs = {
-    memo: Memo;
-    amount: Tokens;
-    fee: Tokens;
-    from_subaccount: ?SubAccount;
-    to: AccountIdentifier;
-    created_at_time: ?TimeStamp;
+    memo : Memo;
+    amount : Tokens;
+    fee : Tokens;
+    from_subaccount : ?SubAccount;
+    to : AccountIdentifier;
+    created_at_time : ?TimeStamp;
   };
 
   public type TransferResult = Result.Result<T.TransferSuccess, TransferError>;
 
-  public func transfer (args: TransferArgs) : async TransferResult {
+  public func transfer (args : TransferArgs) : async TransferResult {
     let result = await Ledger.transfer({
       memo = args.memo;
       amount = args.amount;
@@ -125,18 +125,18 @@ module {
   type BalanceResult = Result.Result<BalanceSuccess, BalanceError>;
 
   type BalanceSuccess = {
-    balance: Nat;
+    balance : Nat;
   };
   type BalanceError = {
-    message: ?Text; 
-    kind: {
+    message : ?Text; 
+    kind : {
       #InvalidToken;
       #InvalidAccount;
       #NotFound;
       #Other;
     };
   };
-  public func balance(args: AccountArgs) : async BalanceResult {
+  public func balance(args : AccountArgs) : async BalanceResult {
     switch (Hex.decode(args.account)){
       case (#err err){
         #err({
@@ -157,7 +157,7 @@ module {
     principal : Principal;
     subaccount : SubAccount;
   };
-  public func getICPAccountIdentifier(args: GetICPAccountIdentifierArgs) : Blob {
+  public func getICPAccountIdentifier(args : GetICPAccountIdentifierArgs) : Blob {
     A.accountIdentifier(args.principal, args.subaccount);
   };
 
@@ -166,7 +166,7 @@ module {
     caller : Principal;
     canisterId : Principal;
   };
-  public func verifyInvoice(args: ICPVerifyInvoiceArgs) : async T.VerifyInvoiceResult {
+  public func verifyInvoice(args : ICPVerifyInvoiceArgs) : async T.VerifyInvoiceResult {
     let i = args.invoice;
     let destinationResult = U.accountIdentifierToText({
       accountIdentifier = i.destination;
@@ -211,7 +211,7 @@ module {
               });
             };
 
-            let verifiedAtTime: ?Time.Time = ?Time.now();
+            let verifiedAtTime : ?Time.Time = ?Time.now();
             // Otherwise, update with latest balance and mark as paid
             let verifiedInvoice = {
               id = i.id;
@@ -233,7 +233,7 @@ module {
             };
 
             // TODO Transfer funds to default subaccount of invoice creator
-            let subaccount: SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
+            let subaccount : SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
 
             let transferResult = await transfer({
               memo = 0;

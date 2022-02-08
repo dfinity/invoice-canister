@@ -31,23 +31,23 @@ actor Invoice {
 // #region State
   stable var invoiceCounter : Nat = 0;
   stable var entries : [(Nat, Invoice)] = [];
-  var invoices: HashMap.HashMap<Nat, Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
+  var invoices : HashMap.HashMap<Nat, Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
 // #endregion
 
 /**
 * Application Interface
-*/    
+*/
 
 // #region Create Invoice
-  public shared ({caller}) func create_invoice (args: T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
+  public shared ({caller}) func create_invoice (args : T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
     let id : Nat = invoiceCounter;
     // increment counter
     invoiceCounter += 1;
 
-    let destinationResult : T.GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({ 
+    let destinationResult : T.GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({
       token=args.token;
       invoiceId=id;
-      caller 
+      caller
     });
 
     switch(destinationResult){
@@ -77,7 +77,7 @@ actor Invoice {
           destination;
           refundAccount = null;
         };
-    
+
         invoices.put(id, invoice);
 
         return #ok({invoice});
@@ -85,7 +85,7 @@ actor Invoice {
     };
   };
 
-  func getTokenVerbose(token: Token) : TokenVerbose { 
+  func getTokenVerbose(token : Token) : TokenVerbose {
     switch(token.symbol){
       case ("ICP") {
         return {
@@ -110,7 +110,7 @@ actor Invoice {
   };
 
 // #region Get Destination Account Identifier
-  func getDestinationAccountIdentifier (args: T.GetDestinationAccountIdentifierArgs) : T.GetDestinationAccountIdentifierResult {
+  func getDestinationAccountIdentifier (args : T.GetDestinationAccountIdentifierArgs) : T.GetDestinationAccountIdentifierResult {
     let token = args.token;
     switch(token.symbol){
       case("ICP"){
@@ -118,13 +118,13 @@ actor Invoice {
 
         let account = U.getICPAccountIdentifier({
           principal = canisterId;
-          subaccount = U.generateInvoiceSubaccount({ 
+          subaccount = U.generateInvoiceSubaccount({
             caller = args.caller;
             id = args.invoiceId;
           });
         });
         let hexEncoded = Hex.encode(Blob.toArray(account));
-        let result: AccountIdentifier = #text(hexEncoded);
+        let result : AccountIdentifier = #text(hexEncoded);
         return #ok({accountIdentifier = result});
       };
       case(_){
@@ -139,7 +139,7 @@ actor Invoice {
 // #endregion
 
 // #region Get Invoice
-  public func get_invoice (args: T.GetInvoiceArgs) : async T.GetInvoiceResult {
+  public func get_invoice (args : T.GetInvoiceArgs) : async T.GetInvoiceResult {
     let invoice = invoices.get(args.id);
     switch(invoice){
       case(null){
@@ -156,7 +156,7 @@ actor Invoice {
 // #endregion
 
 // #region Get Balance
-  public shared ({caller}) func get_balance (args: T.GetBalanceArgs) : async T.GetBalanceResult {
+  public shared ({caller}) func get_balance (args : T.GetBalanceArgs) : async T.GetBalanceResult {
     let token = args.token;
     let canisterId = Principal.fromActor(Invoice);
     switch(token.symbol){
@@ -193,7 +193,7 @@ actor Invoice {
 // #endregion
 
 // #region Verify Invoice
-  public shared ({caller}) func verify_invoice (args: T.VerifyInvoiceArgs) : async T.VerifyInvoiceResult {
+  public shared ({caller}) func verify_invoice (args : T.VerifyInvoiceArgs) : async T.VerifyInvoiceResult {
     let invoice = invoices.get(args.id);
     let canisterId = Principal.fromActor(Invoice);
 
@@ -214,7 +214,7 @@ actor Invoice {
 
         switch (i.token.symbol){
           case("ICP"){
-            let result: T.VerifyInvoiceResult = await ICP.verifyInvoice({
+            let result : T.VerifyInvoiceResult = await ICP.verifyInvoice({
               invoice = i;
               caller;
               canisterId;
@@ -351,7 +351,7 @@ actor Invoice {
 // #endregion
 
 // #region Transfer
-  public shared ({caller}) func transfer (args: T.TransferArgs) : async T.TransferResult {
+  public shared ({caller}) func transfer (args : T.TransferArgs) : async T.TransferResult {
     let token = args.token;
     let accountResult = U.accountIdentifierToBlob({
       accountIdentifier = args.destination;
@@ -368,7 +368,7 @@ actor Invoice {
         switch(token.symbol){
           case("ICP"){
             let now = Nat64.fromIntWrap(Time.now());
-            
+
 
             let transferResult = await ICP.transfer({
               memo = 0;
@@ -430,7 +430,7 @@ actor Invoice {
     * Allows a caller to the accountIdentifier for a given principal
     * for a specific token.
     */
-  public query func get_account_identifier (args: T.GetAccountIdentifierArgs) : async T.GetAccountIdentifierResult {
+  public query func get_account_identifier (args : T.GetAccountIdentifierArgs) : async T.GetAccountIdentifierResult {
     let token = args.token;
     let principal = args.principal;
     let canisterId = Principal.fromActor(Invoice);
@@ -440,7 +440,7 @@ actor Invoice {
         let hexEncoded = Hex.encode(
           Blob.toArray(subaccount)
         );
-        let result: AccountIdentifier = #text(hexEncoded);
+        let result : AccountIdentifier = #text(hexEncoded);
         return #ok({accountIdentifier = result});
       };
       case(_){
@@ -457,7 +457,7 @@ actor Invoice {
   public query func remaining_cycles() : async Nat {
     return Cycles.balance()
   };
-  public func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async T.AccountIdentifierToBlobResult {
+  public func accountIdentifierToBlob (accountIdentifier : AccountIdentifier) : async T.AccountIdentifierToBlobResult {
     return U.accountIdentifierToBlob({
       accountIdentifier;
       canisterId = ?Principal.fromActor(Invoice);

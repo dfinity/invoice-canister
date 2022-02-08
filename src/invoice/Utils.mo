@@ -17,12 +17,12 @@ module {
   type AccountIdentifier = T.AccountIdentifier;
 
   /**
-    * args: { accountIdentifier: AccountIdentifier, canisterId : ?Principal }
+    * args : { accountIdentifier : AccountIdentifier, canisterId  : ?Principal }
     * Takes an account identifier and returns a Blob
     *
     * Canister ID is required only for Principal, and will return an account identifier using that principal as a subaccount for the provided canisterId
     */
-  public func accountIdentifierToBlob (args: T.AccountIdentifierToBlobArgs) : T.AccountIdentifierToBlobResult {
+  public func accountIdentifierToBlob (args : T.AccountIdentifierToBlobArgs) : T.AccountIdentifierToBlobResult {
     let accountIdentifier = args.accountIdentifier;
     let canisterId = args.canisterId;
     let err = {
@@ -75,12 +75,12 @@ module {
     };
   };
   /**
-    * args: { accountIdentifier: AccountIdentifier, canisterId : ?Principal }
+    * args : { accountIdentifier : AccountIdentifier, canisterId  : ?Principal }
     * Takes an account identifier and returns Hex-encoded Text
     *
     * Canister ID is required only for Principal, and will return an account identifier using that principal as a subaccount for the provided canisterId
     */
-  public func accountIdentifierToText (args: T.AccountIdentifierToTextArgs) : T.AccountIdentifierToTextResult {
+  public func accountIdentifierToText (args : T.AccountIdentifierToTextArgs) : T.AccountIdentifierToTextResult {
     let accountIdentifier = args.accountIdentifier;
     let canisterId = args.canisterId;
     switch (accountIdentifier) {
@@ -113,16 +113,16 @@ module {
   };
 
   type GenerateInvoiceSubaccountArgs = {
-    caller: Principal;
-    id: Nat;
+    caller : Principal;
+    id : Nat;
   };
   /**
     * Generates a subaccount for the given principal, to be used as an invoice destination. This is a subaccount, not a full accountIdentifier.
     *
-    * args: { caller: Principal, id: Nat }
-    * Returns: Principal
+    * args : { caller : Principal, id : Nat }
+    * Returns : Principal
     */
-  public func generateInvoiceSubaccount (args: GenerateInvoiceSubaccountArgs) : Blob {
+  public func generateInvoiceSubaccount (args : GenerateInvoiceSubaccountArgs) : Blob {
     let idHash = SHA224.Digest();
     // Length of domain separator
     idHash.write([0x0A]);
@@ -146,7 +146,7 @@ module {
     canisterId : Principal;
     principal : Principal;
   };
-  public func getDefaultAccount(args: DefaultAccountArgs) : Blob {
+  public func getDefaultAccount(args : DefaultAccountArgs) : Blob {
     A.accountIdentifier(args.canisterId, A.principalToSubaccount(args.principal));
   };
 
@@ -154,7 +154,7 @@ module {
     principal : Principal;
     subaccount : T.SubAccount;
   };
-  public func getICPAccountIdentifier(args: GetICPAccountIdentifierArgs) : Blob {
+  public func getICPAccountIdentifier(args : GetICPAccountIdentifierArgs) : Blob {
     A.accountIdentifier(args.principal, args.subaccount);
   };
 }
