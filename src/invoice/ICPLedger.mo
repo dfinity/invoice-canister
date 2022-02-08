@@ -28,7 +28,7 @@ module {
   };
 
   public type AccountIdentifier = Blob;
-  
+
   public type SubAccount = Blob;
 
   public type BlockIndex = Nat64;
@@ -75,40 +75,40 @@ module {
     });
     switch (result){
       case (#Ok index){
-        return #ok({blockHeight = index});
+        #ok({blockHeight = index});
       };
       case (#Err err){
         switch(err){
           case (#BadFee kind){
             let expected_fee = kind.expected_fee;
-            return #err({
+            #err({
               message = Option.make("Bad Fee. Expected fee of " # Nat64.toText(expected_fee.e8s) # " but got " # Nat64.toText(args.fee.e8s));
               kind = #BadFee({expected_fee});
             });
           };
           case (#InsufficientFunds kind){
             let balance = kind.balance;
-            return #err({
+            #err({
               message = Option.make("Insufficient balance. Current balance is " # Nat64.toText(balance.e8s));
               kind = #InsufficientFunds({balance});
             })
           };
           case (#TxTooOld kind){
             let allowed_window_nanos = kind.allowed_window_nanos;
-            return #err({
+            #err({
               message = Option.make("Error - Tx Too Old. Allowed window of " # Nat64.toText(allowed_window_nanos));
               kind = #TxTooOld({allowed_window_nanos});
             })
           };
           case (#TxCreatedInFuture){
-            return #err({
+            #err({
               message = ?"Error - Tx Created In Future";
               kind = #TxCreatedInFuture;
             })
           };
           case (#TxDuplicate kind){
             let duplicate_of = kind.duplicate_of;
-            return #err({
+            #err({
               message = Option.make("Error - Duplicate transaction. Duplicate of " # Nat64.toText(duplicate_of));
               kind = #TxDuplicate({duplicate_of});
             })
@@ -128,7 +128,7 @@ module {
     balance : Nat;
   };
   type BalanceError = {
-    message : ?Text; 
+    message : ?Text;
     kind : {
       #InvalidToken;
       #InvalidAccount;
@@ -174,7 +174,7 @@ module {
     });
     switch (destinationResult) {
       case (#err err){
-        return #err({
+        #err({
           kind = #InvalidAccount;
           message = ?"Invalid destination account";
         });
@@ -253,26 +253,26 @@ module {
             });
             switch (transferResult) {
               case (#ok result) {
-                return #ok(#Paid {
+                #ok(#Paid {
                   invoice = verifiedInvoice;
                 });
               };
               case (#err err) {
                 switch (err.kind) {
                   case (#BadFee f) {
-                    return #err({
+                    #err({
                       message = ?"Bad fee";
                       kind = #TransferError;
                     });
                   };
                   case (#InsufficientFunds f) {
-                    return #err({
+                    #err({
                       message = ?"Insufficient funds";
                       kind = #TransferError;
                     });
                   };
                   case (_) {
-                    return #err({
+                    #err({
                       message = ?"Could not transfer funds to invoice creator.";
                       kind = #TransferError;
                     });

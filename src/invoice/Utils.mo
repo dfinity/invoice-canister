@@ -35,20 +35,20 @@ module {
           case(#ok v){
             let blob = Blob.fromArray(v);
             if(A.validateAccountIdentifier(blob)){
-              return #ok(blob);
+              #ok(blob);
             } else {
-              return #err(err);
+              #err(err);
             }
           };
           case(#err _){
-            return #err(err);
+            #err(err);
           };
         };
       };
       case(#principal principal){
         switch(canisterId){
           case (null){
-            return #err({
+            #err({
               kind = #Other;
               message = ?"Canister Id is required for account identifiers of type principal";
             })
@@ -58,18 +58,18 @@ module {
             // TODO: delete
             Debug.print(debug_show("Text", Hex.encode(Blob.toArray(identifier))));
             if(A.validateAccountIdentifier(identifier)){
-              return #ok(identifier);
+              #ok(identifier);
             } else {
-              return #err(err);
+              #err(err);
             }
           };
         }
       };
       case(#blob(identifier)){
         if(A.validateAccountIdentifier(identifier)){
-          return #ok(identifier);
+          #ok(identifier);
         } else {
-          return #err(err);
+          #err(err);
         }
       };
     };
@@ -85,16 +85,16 @@ module {
     let canisterId = args.canisterId;
     switch (accountIdentifier) {
       case(#text(identifier)){
-        return #ok(identifier);
+        #ok(identifier);
       };
       case(#principal(identifier)){
         let blobResult = accountIdentifierToBlob(args);
         switch(blobResult){
           case(#ok(blob)){
-            return #ok(Hex.encode(Blob.toArray(blob)));
+            #ok(Hex.encode(Blob.toArray(blob)));
           };
           case(#err(err)){
-            return #err(err);
+            #err(err);
           };
         };
       };
@@ -102,10 +102,10 @@ module {
         let blobResult = accountIdentifierToBlob(args);
         switch(blobResult){
           case(#ok(blob)){
-            return #ok(Hex.encode(Blob.toArray(blob)));
+            #ok(Hex.encode(Blob.toArray(blob)));
           };
           case(#err(err)){
-            return #err(err);
+            #err(err);
           };
         };
       };
@@ -136,9 +136,7 @@ module {
     let hashSum = idHash.sum();
     let crc32Bytes = A.beBytes(CRC32.ofArray(hashSum));
     let buf = Buffer.Buffer<Nat8>(32);
-    let blob = Blob.fromArray(Array.append(crc32Bytes, hashSum));
-
-    return blob;
+    Blob.fromArray(Array.append(crc32Bytes, hashSum));
   };
 
   type DefaultAccountArgs = {
