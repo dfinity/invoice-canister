@@ -6,7 +6,6 @@ import Blob      "mo:base/Blob";
 import Buffer    "mo:base/Buffer";
 import Nat32     "mo:base/Nat32";
 import Nat8      "mo:base/Nat8";
-import Prim      "mo:⛔";
 import Principal "mo:base/Principal";
 import Text      "mo:base/Text";
 

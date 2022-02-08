@@ -9,7 +9,7 @@ import Blob       "mo:base/Blob";
 import Buffer     "mo:base/Buffer";
 import Error      "mo:base/Error";
 import Nat8       "mo:base/Nat8";
-import Prim       "mo:⛔";
+import Debug      "mo:base/Debug";
 import Principal  "mo:base/Principal";
 import Text       "mo:base/Text";
 
@@ -19,7 +19,7 @@ module {
   /**
     * args: { accountIdentifier: AccountIdentifier, canisterId : ?Principal }
     * Takes an account identifier and returns a Blob
-    * 
+    *
     * Canister ID is required only for Principal, and will return an account identifier using that principal as a subaccount for the provided canisterId
     */
   public func accountIdentifierToBlob (args: T.AccountIdentifierToBlobArgs) : T.AccountIdentifierToBlobResult {
@@ -55,7 +55,8 @@ module {
           };
           case (? id){
             let identifier = A.accountIdentifier(id, A.principalToSubaccount(principal));
-            Prim.debugPrint(debug_show("Text", Hex.encode(Blob.toArray(identifier))));
+            // TODO: delete
+            Debug.print(debug_show("Text", Hex.encode(Blob.toArray(identifier))));
             if(A.validateAccountIdentifier(identifier)){
               return #ok(identifier);
             } else {
@@ -76,7 +77,7 @@ module {
   /**
     * args: { accountIdentifier: AccountIdentifier, canisterId : ?Principal }
     * Takes an account identifier and returns Hex-encoded Text
-    * 
+    *
     * Canister ID is required only for Principal, and will return an account identifier using that principal as a subaccount for the provided canisterId
     */
   public func accountIdentifierToText (args: T.AccountIdentifierToTextArgs) : T.AccountIdentifierToTextResult {
@@ -115,9 +116,9 @@ module {
     caller: Principal;
     id: Nat;
   };
-  /** 
+  /**
     * Generates a subaccount for the given principal, to be used as an invoice destination. This is a subaccount, not a full accountIdentifier.
-    * 
+    *
     * args: { caller: Principal, id: Nat }
     * Returns: Principal
     */
