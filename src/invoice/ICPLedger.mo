@@ -12,7 +12,6 @@ import Nat        "mo:base/Nat";
 import Nat64      "mo:base/Nat64";
 import Principal  "mo:base/Principal";
 import Result     "mo:base/Result";
-import Text       "mo:base/Text";
 import Time       "mo:base/Time";
 
 module {
@@ -205,7 +204,7 @@ module {
               };
 
               return #err({
-                message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
+                message = ?("Insufficient balance. Current Balance is " # Nat.toText(balance));
                 kind = #NotYetPaid;
               });
             };
