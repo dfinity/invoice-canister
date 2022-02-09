@@ -249,6 +249,7 @@ actor Invoice {
     let canisterId = Principal.fromActor(Invoice);
     let invoice = invoices.get(args.id);
 
+
     let accountResult = U.accountIdentifierToBlob({
       accountIdentifier = args.refundAccount;
       canisterId = ?canisterId;
@@ -270,6 +271,13 @@ actor Invoice {
             });
           };
           case(? i){
+            // Return if caller was not the creator
+            if (i.creator != caller){
+              return #err({
+                message = ?"Only the creator of the invoice can issue a refund";
+                kind = #NotAuthorized;
+              });
+            };
             // Return if already refunded
             if (i.refundedAtTime != null){
               return #err({

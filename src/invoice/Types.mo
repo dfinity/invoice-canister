@@ -213,6 +213,7 @@ module {
       #InsufficientFunds;
       #InvalidToken;
       #AlreadyRefunded;
+      #NotAuthorized;
       #BadFee;
       #Other;
     };

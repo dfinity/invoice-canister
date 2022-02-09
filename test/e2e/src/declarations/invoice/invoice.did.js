@@ -121,6 +121,7 @@ export const idlFactory = ({ IDL }) => {
       'InvalidDestination' : IDL.Null,
       'TransferError' : IDL.Null,
       'NotFound' : IDL.Null,
+      'NotAuthorized' : IDL.Null,
       'BadFee' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'InvalidInvoiceId' : IDL.Null,
