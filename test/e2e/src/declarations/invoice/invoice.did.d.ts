@@ -92,6 +92,7 @@ export interface RefundInvoiceErr {
   'kind' : { 'InvalidDestination' : null } |
     { 'TransferError' : null } |
     { 'NotFound' : null } |
+    { 'NotAuthorized' : null } |
     { 'BadFee' : null } |
     { 'InvalidToken' : null } |
     { 'InvalidInvoiceId' : null } |

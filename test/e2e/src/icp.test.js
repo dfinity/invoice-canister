@@ -199,6 +199,30 @@ describe("ICP Tests", () => {
         },
       });
     });
+    it("should only allow the invoice creator to issue a refund", async () => {
+      const newInvoice = await defaultActor.create_invoice(testInvoice);
+      await balanceHolder.transfer({
+        amount: newInvoice.ok.invoice.amount + FEE,
+        token: {
+          symbol: "ICP",
+        },
+        destination: newInvoice.ok?.invoice?.destination,
+      });
+      const verification = await defaultActor.verify_invoice({
+        id: newInvoice.ok.invoice.id,
+      });
+      expect(verification.ok?.Paid?.invoice?.paid).toBe(true);
+
+      const refund = await balanceHolder.refund_invoice({
+        id: newInvoice.ok.invoice.id,
+        // refunding the full amount minus the fee
+        amount: newInvoice.ok.invoice.amount - FEE,
+        refundAccount: {
+          text: "cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b".toUpperCase(),
+        },
+      });
+      expect(refund.err).toBeTruthy();
+    });
   });
   describe("already completed Invoice", () => {
     it("should return AlreadyVerified if an invoice has already been verified", async () => {

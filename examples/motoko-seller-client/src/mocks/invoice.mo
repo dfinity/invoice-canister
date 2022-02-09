@@ -344,6 +344,13 @@ actor InvoiceMock {
             });
           };
           case(? i){
+            // Return if caller was not the creator
+            if (i.creator != caller){
+              return #err({
+                message = ?"Only the creator of the invoice can issue a refund";
+                kind = #NotAuthorized;
+              });
+            };
             // Return if already refunded
             if (i.refundedAtTime != null){
               return #err({
