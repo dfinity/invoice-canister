@@ -69,6 +69,7 @@ actor InvoiceMock {
           id;
           creator = caller;
           details = args.details;
+          permissions = args.permissions;
           amount = args.amount;
           amountPaid = 0;
           token;
@@ -240,6 +241,7 @@ actor InvoiceMock {
                         id = i.id;
                         creator = i.creator;
                         details = i.details;
+                        permissions = i.permissions;
                         amount = i.amount;
                         // Update invoice with latest balance
                         amountPaid = balance;
@@ -262,6 +264,7 @@ actor InvoiceMock {
                       id = i.id;
                       creator = i.creator;
                       details = i.details;
+                      permissions = i.permissions;
                       amount = i.amount;
                       // update amountPaid
                       amountPaid = balance;
@@ -379,6 +382,7 @@ actor InvoiceMock {
                       id = i.id;
                       creator = i.creator;
                       details = i.details;
+                      permissions = i.permissions;
                       amount = i.amount;
                       amountPaid = i.amountPaid;
                       token = i.token;

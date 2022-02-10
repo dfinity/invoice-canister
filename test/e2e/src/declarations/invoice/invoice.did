@@ -16,6 +16,7 @@ type VerifyInvoiceErr =
       InvalidAccount;
       InvalidInvoiceId;
       InvalidToken;
+      NotAuthorized;
       NotFound;
       NotYetPaid;
       Other;
@@ -86,6 +87,11 @@ type RefundInvoiceArgs =
    id: nat;
    refundAccount: AccountIdentifier;
  };
+type Permissions = 
+ record {
+   canGet: vec principal;
+   canVerify: vec principal;
+ };
 type Invoice = 
  record {
    amount: nat;
@@ -96,6 +102,7 @@ type Invoice =
    expiration: Time;
    id: nat;
    paid: bool;
+   permissions: opt Permissions;
    refundAccount: opt AccountIdentifier;
    refunded: bool;
    refundedAtTime: opt Time;
@@ -112,6 +119,7 @@ type GetInvoiceErr =
  record {
    kind: variant {
            InvalidInvoiceId;
+           NotAuthorized;
            NotFound;
            Other;
          };
@@ -181,6 +189,7 @@ type CreateInvoiceArgs =
  record {
    amount: nat;
    details: opt Details;
+   permissions: opt Permissions;
    token: Token;
  };
 type AccountIdentifier__1 = 
@@ -216,7 +225,7 @@ service : {
   get_account_identifier: (GetAccountIdentifierArgs) ->
    (GetAccountIdentifierResult) query;
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
-  get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult);
+  get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult) query;
   refund_invoice: (RefundInvoiceArgs) -> (RefundInvoiceResult);
   remaining_cycles: () -> (nat) query;
   transfer: (TransferArgs) -> (TransferResult);

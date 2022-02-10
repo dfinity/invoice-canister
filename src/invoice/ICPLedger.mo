@@ -184,6 +184,7 @@ module {
                 id = i.id;
                 creator = args.caller;
                 details = i.details;
+                permissions = i.permissions;
                 amount = i.amount;
                 // Update invoice with latest balance
                 amountPaid = balance;
@@ -208,6 +209,7 @@ module {
               id = i.id;
               creator = i.creator;
               details = i.details;
+              permissions = i.permissions;
               amount = i.amount;
               // update amountPaid
               amountPaid = balance;

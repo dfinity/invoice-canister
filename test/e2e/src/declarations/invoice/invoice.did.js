@@ -16,12 +16,17 @@ export const idlFactory = ({ IDL }) => {
     'ok' : AccountIdentifierToBlobSuccess,
     'err' : AccountIdentifierToBlobErr,
   });
+  const Permissions = IDL.Record({
+    'canGet' : IDL.Vec(IDL.Principal),
+    'canVerify' : IDL.Vec(IDL.Principal),
+  });
   const Token = IDL.Record({ 'symbol' : IDL.Text });
   const Details = IDL.Record({
     'meta' : IDL.Vec(IDL.Nat8),
     'description' : IDL.Text,
   });
   const CreateInvoiceArgs = IDL.Record({
+    'permissions' : IDL.Opt(Permissions),
     'token' : Token,
     'details' : IDL.Opt(Details),
     'amount' : IDL.Nat,
@@ -39,6 +44,7 @@ export const idlFactory = ({ IDL }) => {
   const Time = IDL.Int;
   const Invoice = IDL.Record({
     'id' : IDL.Nat,
+    'permissions' : IDL.Opt(Permissions),
     'creator' : IDL.Principal,
     'destination' : AccountIdentifier,
     'token' : TokenVerbose,
@@ -101,6 +107,7 @@ export const idlFactory = ({ IDL }) => {
   const GetInvoiceErr = IDL.Record({
     'kind' : IDL.Variant({
       'NotFound' : IDL.Null,
+      'NotAuthorized' : IDL.Null,
       'InvalidInvoiceId' : IDL.Null,
       'Other' : IDL.Null,
     }),
@@ -166,6 +173,7 @@ export const idlFactory = ({ IDL }) => {
       'InvalidAccount' : IDL.Null,
       'TransferError' : IDL.Null,
       'NotFound' : IDL.Null,
+      'NotAuthorized' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'InvalidInvoiceId' : IDL.Null,
       'Other' : IDL.Null,
@@ -191,7 +199,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),
-    'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], []),
+    'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], ['query']),
     'refund_invoice' : IDL.Func([RefundInvoiceArgs], [RefundInvoiceResult], []),
     'remaining_cycles' : IDL.Func([], [IDL.Nat], ['query']),
     'transfer' : IDL.Func([TransferArgs], [TransferResult], []),

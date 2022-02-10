@@ -4,6 +4,7 @@ import ICP        "./ICPLedger";
 import T          "./Types";
 import U          "./Utils";
 
+import Array      "mo:base/Array";
 import Blob       "mo:base/Blob";
 import Cycles     "mo:base/ExperimentalCycles";
 import Hash       "mo:base/Hash";
@@ -11,6 +12,7 @@ import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
 import Nat        "mo:base/Nat";
 import Nat64      "mo:base/Nat64";
+import Option     "mo:base/Option";
 import Principal  "mo:base/Principal";
 import Text       "mo:base/Text";
 import Time       "mo:base/Time";
@@ -65,6 +67,7 @@ actor Invoice {
           id;
           creator = caller;
           details = args.details;
+          permissions = args.permissions;
           amount = args.amount;
           amountPaid = 0;
           token;
@@ -139,7 +142,7 @@ actor Invoice {
 // #endregion
 
 // #region Get Invoice
-  public func get_invoice (args : T.GetInvoiceArgs) : async T.GetInvoiceResult {
+  public shared query ({caller}) func get_invoice (args : T.GetInvoiceArgs) : async T.GetInvoiceResult {
     let invoice = invoices.get(args.id);
     switch(invoice){
       case(null){
@@ -149,6 +152,34 @@ actor Invoice {
         });
       };
       case(? i){
+        if(i.creator == caller){
+          return #ok({invoice = i});
+        };
+        // If additional permissions are provided
+        switch(i.permissions){
+          case (null) {
+            return #err({
+              message = ?"You do not have permission to view this invoice";
+              kind = #NotAuthorized;
+            }); 
+          };
+          case (? permissions){
+            let hasPermission = Array.find<Principal>(
+              permissions.canGet,
+              func (x : Principal) : Bool {
+                return x == caller;
+              }
+            );
+            if(Option.isSome(hasPermission)){
+              return #ok({invoice = i});
+            } else {
+              return #err({
+                message = ?"You do not have permission to view this invoice";
+                kind = #NotAuthorized;
+              });
+            };
+          };
+        };
         #ok({invoice = i});
       };
     };
@@ -210,6 +241,32 @@ actor Invoice {
           return #ok(#AlreadyVerified{
             invoice = i;
           });
+        };
+        if(i.creator != caller){
+          switch (i.permissions){
+            case (null) {
+              return #err({
+                message = ?"You do not have permission to verify this invoice";
+                kind = #NotAuthorized;
+              });
+            };
+            case (? permissions){
+              let hasPermission = Array.find<Principal>(
+                permissions.canVerify,
+                func (x : Principal) : Bool {
+                  return x == caller;
+                }
+              );
+              if(Option.isSome(hasPermission)){
+                // May proceed
+              } else {
+                return #err({
+                  message = ?"You do not have permission to verify this invoice";
+                  kind = #NotAuthorized;
+                });
+              };
+            };
+          };
         };
 
         switch (i.token.symbol){
@@ -306,6 +363,7 @@ actor Invoice {
                       id = i.id;
                       creator = i.creator;
                       details = i.details;
+                      permissions = i.permissions;
                       amount = i.amount;
                       amountPaid = i.amountPaid;
                       token = i.token;
