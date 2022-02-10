@@ -20,6 +20,7 @@ const testInvoice = {
       meta: Array.from(encoder.encode(JSON.stringify(testMeta))),
     },
   ],
+  permissions: [],
 };
 
 let createResult;
@@ -117,6 +118,33 @@ describe("ICP Tests", () => {
         throw new Error(invoice.err.message);
       }
     });
+    it("should reject get_invoice from unauthorized callers", async () => {
+      const invoice = await balanceHolder.get_invoice({
+        id: createResult.ok.invoice.id,
+      });
+      expect(invoice.err).toStrictEqual({
+        kind: {
+          NotAuthorized: null,
+        },
+        message: ["You do not have permission to view this invoice"],
+      });
+    });
+    it("should allow get_invoice to be called by authorized callers", async () => {
+      const invoice = await defaultActor.create_invoice({
+        ...testInvoice,
+        permissions: [
+          {
+            canGet: [identityUtils.balanceHolderIdentity.getPrincipal()],
+            canVerify: [],
+          },
+        ],
+      });
+
+      const result = await balanceHolder.get_invoice({
+        id: invoice.ok.invoice.id,
+      });
+      expect(result.ok).toBeTruthy();
+    });
     it("should not mark a payment verified if the balance has not been paid", async () => {
       let verifyResult = await defaultActor.verify_invoice({
         id: createResult.ok.invoice.id,
@@ -128,7 +156,7 @@ describe("ICP Tests", () => {
         },
       });
     });
-    it("should a payment verified if the balance has been paid", async () => {
+    it("should mark an invoice verified if the balance has been paid", async () => {
       // Transfer balance to the balance holder
       await balanceHolder.transfer({
         amount: createResult.ok.invoice.amount + FEE,
@@ -143,6 +171,45 @@ describe("ICP Tests", () => {
         id: createResult.ok.invoice.id,
       });
       expect(verifyResult.ok?.Paid?.invoice?.paid).toBe(true);
+    });
+    it("should not allow a caller to verify an invoice if they are not the creator or on the allowlist", async () => {
+      const invoice = await defaultActor.create_invoice(testInvoice);
+      const result = await balanceHolder.verify_invoice({
+        id: invoice.ok.invoice.id,
+      });
+      expect(result.err).toStrictEqual({
+        kind: {
+          NotAuthorized: null,
+        },
+        message: ["You do not have permission to verify this invoice"],
+      });
+    });
+    it("should not allow a caller to verify an invoice if they are not the creator or on the allowlist", async () => {
+      const invoice = await defaultActor.create_invoice(testInvoice);
+      const result = await balanceHolder.verify_invoice({
+        id: invoice.ok.invoice.id,
+      });
+      expect(result.err).toStrictEqual({
+        kind: {
+          NotAuthorized: null,
+        },
+        message: ["You do not have permission to verify this invoice"],
+      });
+    });
+    it("should allow a non-creator caller to verify an invoice if they are on the allowlist", async () => {
+      const invoice = await defaultActor.create_invoice({
+        ...testInvoice,
+        permissions: [
+          {
+            canGet: [],
+            canVerify: [identityUtils.balanceHolderIdentity.getPrincipal()],
+          },
+        ],
+      });
+      const result = await balanceHolder.verify_invoice({
+        id: invoice.ok.invoice.id,
+      });
+      expect(result.err.kind).toStrictEqual({ NotYetPaid: null });
     });
   });
   describe("Refund Tests", () => {
