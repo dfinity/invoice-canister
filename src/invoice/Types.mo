@@ -220,6 +220,7 @@ module {
       #TransferError;
       #InsufficientFunds;
       #InvalidToken;
+      #InvalidAmount;
       #AlreadyRefunded;
       #NotAuthorized;
       #BadFee;

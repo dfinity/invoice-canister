@@ -76,7 +76,7 @@ actor Invoice {
           paid = false;
           refunded = false;
           // 1 week in nanoseconds
-          expiration = Time.now() + (1000 * 60 * 60 * 24 * 7);
+          expiration = Time.now() + (1000 * 60 * 60 * 24 * 7 * 1_000_000);
           destination;
           refundAccount = null;
         };
@@ -304,8 +304,6 @@ actor Invoice {
 // #region Refund Invoice
   public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
     let canisterId = Principal.fromActor(Invoice);
-    let invoice = invoices.get(args.id);
-
 
     let accountResult = U.accountIdentifierToBlob({
       accountIdentifier = args.refundAccount;
@@ -333,6 +331,13 @@ actor Invoice {
               return #err({
                 message = ?"Only the creator of the invoice can issue a refund";
                 kind = #NotAuthorized;
+              });
+            };
+            // Return if refund amount is greater than the invoice amountPaid
+            if (args.amount > i.amountPaid){
+              return #err({
+                message = ?"Refund amount cannot be greater than the amount paid";
+                kind = #InvalidAmount;
               });
             };
             // Return if already refunded

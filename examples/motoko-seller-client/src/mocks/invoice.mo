@@ -354,6 +354,13 @@ actor InvoiceMock {
                 kind = #NotAuthorized;
               });
             };
+            // Return if refund amount is greater than the invoice amountPaid
+            if (args.amount > i.amountPaid){
+              return #err({
+                message = ?"Refund amount cannot be greater than the amount paid";
+                kind = #InvalidAmount;
+              });
+            };
             // Return if already refunded
             if (i.refundedAtTime != null){
               return #err({
