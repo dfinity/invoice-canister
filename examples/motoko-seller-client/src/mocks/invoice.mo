@@ -237,22 +237,6 @@ actor InvoiceMock {
                   };
                   case (? balance){
                     if(balance < i.amount){
-                      let updatedInvoice = {
-                        id = i.id;
-                        creator = i.creator;
-                        details = i.details;
-                        permissions = i.permissions;
-                        amount = i.amount;
-                        // Update invoice with latest balance
-                        amountPaid = balance;
-                        token = i.token;
-                        verifiedAtTime = i.verifiedAtTime;
-                        paid = false;
-                        refunded = false;
-                        expiration = i.expiration;
-                        destination = i.destination;
-                        refundAccount = i.refundAccount;
-                      };
                       return #err({
                         message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
                         kind = #NotYetPaid;
