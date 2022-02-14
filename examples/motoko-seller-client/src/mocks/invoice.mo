@@ -324,7 +324,6 @@ actor InvoiceMock {
 // #region Refund Invoice
   public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
     let canisterId = Principal.fromActor(InvoiceMock);
-    let invoice = invoices.get(args.id);
 
     let accountResult = U.accountIdentifierToBlob({
       accountIdentifier = args.refundAccount;
