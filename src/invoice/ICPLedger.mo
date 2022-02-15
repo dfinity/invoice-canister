@@ -180,23 +180,6 @@ module {
             let balance = b.balance;
             // If balance is less than invoice amount, return error
             if(balance < i.amount){
-              let updatedInvoice = {
-                id = i.id;
-                creator = args.caller;
-                details = i.details;
-                permissions = i.permissions;
-                amount = i.amount;
-                // Update invoice with latest balance
-                amountPaid = balance;
-                token = i.token;
-                verifiedAtTime = i.verifiedAtTime;
-                paid = false;
-                refunded = false;
-                expiration = i.expiration;
-                destination = i.destination;
-                refundAccount = i.refundAccount;
-              };
-
               return #err({
                 message = ?("Insufficient balance. Current Balance is " # Nat.toText(balance));
                 kind = #NotYetPaid;
