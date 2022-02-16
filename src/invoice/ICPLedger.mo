@@ -187,26 +187,6 @@ module {
             };
 
             let verifiedAtTime : ?Time.Time = ?Time.now();
-            // Otherwise, update with latest balance and mark as paid
-            let verifiedInvoice = {
-              id = i.id;
-              creator = i.creator;
-              details = i.details;
-              permissions = i.permissions;
-              amount = i.amount;
-              // update amountPaid
-              amountPaid = balance;
-              token = i.token;
-              // update verifiedAtTime
-              verifiedAtTime;
-              refundedAtTime = i.refundedAtTime;
-              // update paid
-              paid = true;
-              refunded = false;
-              expiration = i.expiration;
-              destination = i.destination;
-              refundAccount = i.refundAccount;
-            };
 
             // TODO Transfer funds to default subaccount of invoice creator
             let subaccount : SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
@@ -229,6 +209,26 @@ module {
             });
             switch transferResult {
               case (#ok result) {
+                let verifiedInvoice = {
+                  id = i.id;
+                  creator = i.creator;
+                  details = i.details;
+                  permissions = i.permissions;
+                  amount = i.amount;
+                  // update amountPaid
+                  amountPaid = balance;
+                  token = i.token;
+                  // update verifiedAtTime
+                  verifiedAtTime;
+                  refundedAtTime = i.refundedAtTime;
+                  // update paid
+                  paid = true; // since transfer has succeeded
+                  refunded = false;
+                  expiration = i.expiration;
+                  destination = i.destination;
+                  refundAccount = i.refundAccount;
+                };
+
                 #ok(#Paid {
                   invoice = verifiedInvoice;
                 });
