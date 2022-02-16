@@ -26,6 +26,12 @@ actor Invoice {
   type Invoice = T.Invoice;
 // #endregion
 
+  let errInvalidToken =
+    #err({
+       message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+       kind = #InvalidToken;
+    });
+
 /**
 * Application State
 */
@@ -131,10 +137,7 @@ actor Invoice {
         #ok({accountIdentifier = result});
       };
       case _ {
-        #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+        errInvalidToken;
       };
     };
   };
@@ -161,7 +164,7 @@ actor Invoice {
             return #err({
               message = ?"You do not have permission to view this invoice";
               kind = #NotAuthorized;
-            }); 
+            });
           };
           case (?permissions) {
             let hasPermission = Array.find<Principal>(
@@ -290,10 +293,7 @@ actor Invoice {
             result;
           };
           case _ {
-            #err({
-              message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-              kind = #InvalidToken;
-            });
+            errInvalidToken;
           };
         };
       };
@@ -408,10 +408,7 @@ actor Invoice {
                 };
               };
               case _ {
-                #err({
-                  message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-                  kind = #InvalidToken;
-                });
+                errInvalidToken;
               };
             }
           };
@@ -483,10 +480,7 @@ actor Invoice {
             };
           };
           case _ {
-            #err({
-              message = ?"Token not supported";
-              kind = #InvalidToken;
-            });
+            errInvalidToken;
           };
         };
       };
@@ -514,10 +508,7 @@ actor Invoice {
         #ok({accountIdentifier = result});
       };
       case _ {
-        #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+        errInvalidToken;
       };
     };
   };
