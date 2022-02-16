@@ -247,7 +247,7 @@ module {
                       kind = #TransferError;
                     });
                   };
-                  case (_) {
+                  case _ {
                     #err({
                       message = ?"Could not transfer funds to invoice creator.";
                       kind = #TransferError;

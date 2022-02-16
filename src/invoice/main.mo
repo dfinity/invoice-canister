@@ -466,7 +466,7 @@ actor Invoice {
                       kind = #InsufficientFunds;
                     });
                   };
-                  case (_) {
+                  case _ {
                     #err({
                       message = err.message;
                       kind = #Other;
