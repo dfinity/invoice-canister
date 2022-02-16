@@ -217,10 +217,7 @@ actor Invoice {
         };
       };
       case _ {
-        #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+        errInvalidToken;
       };
     };
   };
