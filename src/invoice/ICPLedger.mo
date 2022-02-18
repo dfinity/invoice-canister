@@ -64,40 +64,40 @@ module {
 
   public func transfer (args : TransferArgs) : async TransferResult {
     let result = await Ledger.transfer(args);
-    switch (result){
-      case (#Ok index){
+    switch result {
+      case (#Ok index) {
         #ok({blockHeight = index});
       };
-      case (#Err err){
-        switch(err){
-          case (#BadFee kind){
+      case (#Err err) {
+        switch err {
+          case (#BadFee kind) {
             let expected_fee = kind.expected_fee;
             #err({
               message = ?("Bad Fee. Expected fee of " # Nat64.toText(expected_fee.e8s) # " but got " # Nat64.toText(args.fee.e8s));
               kind = #BadFee({expected_fee});
             });
           };
-          case (#InsufficientFunds kind){
+          case (#InsufficientFunds kind) {
             let balance = kind.balance;
             #err({
               message = ?("Insufficient balance. Current balance is " # Nat64.toText(balance.e8s));
               kind = #InsufficientFunds({balance});
             })
           };
-          case (#TxTooOld kind){
+          case (#TxTooOld kind) {
             let allowed_window_nanos = kind.allowed_window_nanos;
             #err({
               message = ?("Error - Tx Too Old. Allowed window of " # Nat64.toText(allowed_window_nanos));
               kind = #TxTooOld({allowed_window_nanos});
             })
           };
-          case (#TxCreatedInFuture){
+          case (#TxCreatedInFuture) {
             #err({
               message = ?"Error - Tx Created In Future";
               kind = #TxCreatedInFuture;
             })
           };
-          case (#TxDuplicate kind){
+          case (#TxDuplicate kind) {
             let duplicate_of = kind.duplicate_of;
             #err({
               message = ?("Error - Duplicate transaction. Duplicate of " # Nat64.toText(duplicate_of));
@@ -128,8 +128,8 @@ module {
     };
   };
   public func balance(args : AccountArgs) : async BalanceResult {
-    switch (Hex.decode(args.account)){
-      case (#err err){
+    switch (Hex.decode(args.account)) {
+      case (#err err) {
         #err({
           kind = #InvalidAccount;
           message = ?"Invalid account";
@@ -163,23 +163,23 @@ module {
       accountIdentifier = i.destination;
       canisterId = ?args.canisterId;
     });
-    switch (destinationResult) {
-      case (#err err){
+    switch destinationResult {
+      case (#err err) {
         #err({
           kind = #InvalidAccount;
           message = ?"Invalid destination account";
         });
       };
-      case (#ok destination){
+      case (#ok destination) {
         let balanceResult = await balance({account = destination});
-        switch(balanceResult){
-          case(#err err){
+        switch balanceResult {
+          case (#err err) {
             #err(err);
           };
-          case(#ok b){
+          case (#ok b) {
             let balance = b.balance;
             // If balance is less than invoice amount, return error
-            if(balance < i.amount){
+            if (balance < i.amount) {
               return #err({
                 message = ?("Insufficient balance. Current Balance is " # Nat.toText(balance));
                 kind = #NotYetPaid;
@@ -187,26 +187,6 @@ module {
             };
 
             let verifiedAtTime : ?Time.Time = ?Time.now();
-            // Otherwise, update with latest balance and mark as paid
-            let verifiedInvoice = {
-              id = i.id;
-              creator = i.creator;
-              details = i.details;
-              permissions = i.permissions;
-              amount = i.amount;
-              // update amountPaid
-              amountPaid = balance;
-              token = i.token;
-              // update verifiedAtTime
-              verifiedAtTime;
-              refundedAtTime = i.refundedAtTime;
-              // update paid
-              paid = true;
-              refunded = false;
-              expiration = i.expiration;
-              destination = i.destination;
-              refundAccount = i.refundAccount;
-            };
 
             // TODO Transfer funds to default subaccount of invoice creator
             let subaccount : SubAccount = U.generateInvoiceSubaccount({ caller = i.creator; id = i.id });
@@ -227,8 +207,28 @@ module {
               });
               created_at_time = null;
             });
-            switch (transferResult) {
+            switch transferResult {
               case (#ok result) {
+                let verifiedInvoice = {
+                  id = i.id;
+                  creator = i.creator;
+                  details = i.details;
+                  permissions = i.permissions;
+                  amount = i.amount;
+                  // update amountPaid
+                  amountPaid = balance;
+                  token = i.token;
+                  // update verifiedAtTime
+                  verifiedAtTime;
+                  refundedAtTime = i.refundedAtTime;
+                  // update paid
+                  paid = true; // since transfer has succeeded
+                  refunded = false;
+                  expiration = i.expiration;
+                  destination = i.destination;
+                  refundAccount = i.refundAccount;
+                };
+
                 #ok(#Paid {
                   invoice = verifiedInvoice;
                 });
@@ -247,7 +247,7 @@ module {
                       kind = #TransferError;
                     });
                   };
-                  case (_) {
+                  case _ {
                     #err({
                       message = ?"Could not transfer funds to invoice creator.";
                       kind = #TransferError;
