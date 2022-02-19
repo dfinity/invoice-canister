@@ -1,7 +1,7 @@
-import A          "../../../../src/invoice/Account";   
-import Hex        "../../../../src/invoice/Hex";
-import T          "../../../../src/invoice/Types";
-import U          "../../../../src/invoice/Utils";
+import A          "../../../../../src/invoice/Account";   
+import Hex        "../../../../../src/invoice/Hex";
+import T          "../../../../../src/invoice/Types";
+import U          "../../../../../src/invoice/Utils";
 
 import Blob       "mo:base/Blob";
 import Debug      "mo:base/Debug";

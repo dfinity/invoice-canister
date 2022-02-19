@@ -89,6 +89,11 @@ actor Seller {
   public query func remaining_cycles() : async Nat {
     return Cycles.balance()
   };
+
+  public shared ({caller}) func reset_license() : async () {
+    licenses.put(caller, false);
+    ();
+  };
 // #endregion
 
 // #region Upgrade Hooks
