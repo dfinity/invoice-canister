@@ -1,8 +1,10 @@
 import Invoice "canister:invoice";
 
 import Cycles     "mo:base/ExperimentalCycles";
+import Hash       "mo:base/Hash";
 import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
+import Nat        "mo:base/Nat";
 import Principal  "mo:base/Principal";
 import Result     "mo:base/Result";
 import Text       "mo:base/Text";
@@ -11,8 +13,8 @@ actor Seller {
 
   let ONE_ICP_IN_E8S = 100_000_000;
 
-  stable var invoicesStable : [(Principal, Invoice.Invoice)] = [];
-  var invoices: HashMap.HashMap<Principal, Invoice.Invoice> = HashMap.HashMap(16, Principal.equal, Principal.hash);
+  stable var invoicesStable : [(Nat, Invoice.Invoice)] = [];
+  var invoices: HashMap.HashMap<Nat, Invoice.Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
 
   stable var licensesStable : [(Principal, Bool)] = [];
   var licenses: HashMap.HashMap<Principal, Bool> = HashMap.HashMap(16, Principal.equal, Principal.hash);
@@ -20,7 +22,7 @@ actor Seller {
 // #region create_invoice
   public shared ({caller}) func create_invoice() : async Invoice.CreateInvoiceResult {
     let invoiceCreateArgs : Invoice.CreateInvoiceArgs = {
-      amount = ONE_ICP_IN_E8S / 10;
+      amount = ONE_ICP_IN_E8S * 10;
       token = {
         symbol = "ICP";
       };
@@ -40,7 +42,7 @@ actor Seller {
     switch(invoiceResult){
       case(#err _) {};
       case(#ok result) {
-        invoices.put(caller, result.invoice);
+        invoices.put(result.invoice.id, result.invoice);
       };
     };
     return invoiceResult;
@@ -58,12 +60,12 @@ actor Seller {
     };
   };
 
-  public shared query ({caller}) func get_invoice() : async ?Invoice.Invoice {
-    invoices.get(caller);
+  public shared query ({caller}) func get_invoice(id: Nat) : async ?Invoice.Invoice {
+    invoices.get(id);
   };
 
-  public shared ({caller}) func verify_invoice() : async Invoice.VerifyInvoiceResult {
-    let invoiceResult = invoices.get(caller);
+  public shared ({caller}) func verify_invoice(id: Nat) : async Invoice.VerifyInvoiceResult {
+    let invoiceResult = invoices.get(id);
     switch(invoiceResult){
       case(null){
         return #err({
@@ -73,13 +75,22 @@ actor Seller {
       };
       case (? invoice){
         let verifyResult = await Invoice.verify_invoice({id = invoice.id});
-        if (Result.isOk(verifyResult)){
-          // update invoices with the verified invoice
-          invoices.put(caller, invoice);
-
-          // update licenses with the verified invoice
-          licenses.put(caller, true);
+        switch(verifyResult){
+          case(#err _) {};
+          case(#ok result) {
+            switch(result){
+              case(#Paid p){
+                invoices.put(id, p.invoice);
+              };
+              case(#AlreadyPaid a){
+                invoices.put(id, a.invoice);
+              };
+            };
+            // update licenses with the verified invoice
+            licenses.put(caller, true);
+          };
         };
+        
         return verifyResult;
       };
     };
@@ -103,7 +114,7 @@ actor Seller {
   };
 
   system func postupgrade() {
-      invoices := HashMap.fromIter(Iter.fromArray(invoicesStable), 16, Principal.equal, Principal.hash);
+      invoices := HashMap.fromIter(Iter.fromArray(invoicesStable), 16, Nat.equal, Hash.hash);
       invoicesStable := [];
       licenses := HashMap.fromIter(Iter.fromArray(licensesStable), 16, Principal.equal, Principal.hash);
       licensesStable := [];

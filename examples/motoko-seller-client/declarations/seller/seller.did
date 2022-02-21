@@ -84,8 +84,8 @@ type AccountIdentifier =
 service : {
   check_license_status: () -> (bool) query;
   create_invoice: () -> (CreateInvoiceResult);
-  get_invoice: () -> (opt Invoice) query;
+  get_invoice: (nat) -> (opt Invoice) query;
   remaining_cycles: () -> (nat) query;
   reset_license: () -> ();
-  verify_invoice: () -> (VerifyInvoiceResult);
+  verify_invoice: (nat) -> (VerifyInvoiceResult);
 }
