@@ -59,7 +59,6 @@ export interface _SERVICE {
   'check_license_status' : () => Promise<boolean>,
   'create_invoice' : () => Promise<CreateInvoiceResult>,
   'get_invoice' : (arg_0: bigint) => Promise<[] | [Invoice]>,
-  'remaining_cycles' : () => Promise<bigint>,
   'reset_license' : () => Promise<undefined>,
   'verify_invoice' : (arg_0: bigint) => Promise<VerifyInvoiceResult>,
 }

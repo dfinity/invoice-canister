@@ -74,7 +74,6 @@ export const idlFactory = ({ IDL }) => {
     'check_license_status' : IDL.Func([], [IDL.Bool], ['query']),
     'create_invoice' : IDL.Func([], [CreateInvoiceResult], []),
     'get_invoice' : IDL.Func([IDL.Nat], [IDL.Opt(Invoice)], ['query']),
-    'remaining_cycles' : IDL.Func([], [IDL.Nat], ['query']),
     'reset_license' : IDL.Func([], [], []),
     'verify_invoice' : IDL.Func([IDL.Nat], [VerifyInvoiceResult], []),
   });

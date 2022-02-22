@@ -244,7 +244,6 @@ service : {
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
   get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult);
   refund_invoice: (RefundInvoiceArgs) -> (RefundInvoiceResult);
-  remaining_cycles: () -> (nat) query;
   transfer: (TransferArgs) -> (TransferResult);
   verify_invoice: (VerifyInvoiceArgs) -> (VerifyInvoiceResult);
 }

@@ -1,6 +1,5 @@
 import Invoice "canister:invoice";
 
-import Cycles     "mo:base/ExperimentalCycles";
 import Hash       "mo:base/Hash";
 import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
@@ -97,10 +96,6 @@ actor Seller {
   };
 
 // #region Utils
-  public query func remaining_cycles() : async Nat {
-    return Cycles.balance()
-  };
-
   public shared ({caller}) func reset_license() : async () {
     licenses.put(caller, false);
     ();

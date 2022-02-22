@@ -215,7 +215,6 @@ export const idlFactory = ({ IDL }) => {
     'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),
     'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], []),
     'refund_invoice' : IDL.Func([RefundInvoiceArgs], [RefundInvoiceResult], []),
-    'remaining_cycles' : IDL.Func([], [IDL.Nat], ['query']),
     'transfer' : IDL.Func([TransferArgs], [TransferResult], []),
     'verify_invoice' : IDL.Func([VerifyInvoiceArgs], [VerifyInvoiceResult], []),
   });
