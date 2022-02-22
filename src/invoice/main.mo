@@ -6,7 +6,6 @@ import U          "./Utils";
 
 import Array      "mo:base/Array";
 import Blob       "mo:base/Blob";
-import Cycles     "mo:base/ExperimentalCycles";
 import Hash       "mo:base/Hash";
 import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
@@ -512,10 +511,6 @@ actor Invoice {
 // #endregion
 
 // #region Utils
-  public query func remaining_cycles() : async Nat {
-    Cycles.balance()
-  };
-
   public func accountIdentifierToBlob (accountIdentifier : AccountIdentifier) : async T.AccountIdentifierToBlobResult {
     U.accountIdentifierToBlob({
       accountIdentifier;

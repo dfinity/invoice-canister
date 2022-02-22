@@ -31,5 +31,6 @@
             "packtool": "vessel sources"
         }
     },
+    "dfx": "0.8.5",
     "version": 1
 }

@@ -4,7 +4,6 @@ import T          "../../../../../src/invoice/Types";
 import U          "../../../../../src/invoice/Utils";
 
 import Blob       "mo:base/Blob";
-import Cycles     "mo:base/ExperimentalCycles";
 import Debug      "mo:base/Debug";
 import Hash       "mo:base/Hash";
 import HashMap    "mo:base/HashMap";
@@ -529,9 +528,6 @@ actor InvoiceMock {
 // #endregion
 
 // #region Utils
-  public query func remaining_cycles() : async Nat {
-    return Cycles.balance()
-  };
   public func accountIdentifierToBlob (accountIdentifier: AccountIdentifier) : async T.AccountIdentifierToBlobResult {
     return U.accountIdentifierToBlob({
       accountIdentifier;
