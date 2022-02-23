@@ -4,6 +4,7 @@ import ICP        "./ICPLedger";
 import T          "./Types";
 import U          "./Utils";
 
+import Array      "mo:base/Array";
 import Blob       "mo:base/Blob";
 import Cycles     "mo:base/ExperimentalCycles";
 import Hash       "mo:base/Hash";
@@ -11,6 +12,7 @@ import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
 import Nat        "mo:base/Nat";
 import Nat64      "mo:base/Nat64";
+import Option     "mo:base/Option";
 import Principal  "mo:base/Principal";
 import Text       "mo:base/Text";
 import Time       "mo:base/Time";
@@ -23,6 +25,12 @@ actor Invoice {
   type AccountIdentifier = T.AccountIdentifier;
   type Invoice = T.Invoice;
 // #endregion
+
+  let errInvalidToken =
+    #err({
+       message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+       kind = #InvalidToken;
+    });
 
 /**
 * Application State
@@ -46,8 +54,8 @@ actor Invoice {
     invoiceCounter += 1;
 
     let destinationResult : T.GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({
-      token=args.token;
-      invoiceId=id;
+      token = args.token;
+      invoiceId = id;
       caller
     });
 
@@ -66,6 +74,7 @@ actor Invoice {
           id;
           creator = caller;
           details = args.details;
+          permissions = args.permissions;
           amount = args.amount;
           amountPaid = 0;
           token;
@@ -74,7 +83,7 @@ actor Invoice {
           paid = false;
           refunded = false;
           // 1 week in nanoseconds
-          expiration = Time.now() + (1000 * 60 * 60 * 24 * 7);
+          expiration = Time.now() + (1000 * 60 * 60 * 24 * 7 * 1_000_000);
           destination;
           refundAccount = null;
         };
@@ -113,8 +122,8 @@ actor Invoice {
 // #region Get Destination Account Identifier
   func getDestinationAccountIdentifier (args : T.GetDestinationAccountIdentifierArgs) : T.GetDestinationAccountIdentifierResult {
     let token = args.token;
-    switch(token.symbol){
-      case("ICP"){
+    switch (token.symbol) {
+      case "ICP" {
         let canisterId = Principal.fromActor(Invoice);
 
         let account = U.getICPAccountIdentifier({
@@ -128,11 +137,8 @@ actor Invoice {
         let result : AccountIdentifier = #text(hexEncoded);
         #ok({accountIdentifier = result});
       };
-      case(_){
-        #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+      case _ {
+        errInvalidToken;
       };
     };
   };
@@ -140,16 +146,44 @@ actor Invoice {
 // #endregion
 
 // #region Get Invoice
-  public func get_invoice (args : T.GetInvoiceArgs) : async T.GetInvoiceResult {
+  public shared query ({caller}) func get_invoice (args : T.GetInvoiceArgs) : async T.GetInvoiceResult {
     let invoice = invoices.get(args.id);
-    switch(invoice){
-      case(null){
+    switch invoice {
+      case null {
         #err({
           message = ?"Invoice not found";
           kind = #NotFound;
         });
       };
-      case(? i){
+      case (?i) {
+        if (i.creator == caller) {
+          return #ok({invoice = i});
+        };
+        // If additional permissions are provided
+        switch (i.permissions) {
+          case (null) {
+            return #err({
+              message = ?"You do not have permission to view this invoice";
+              kind = #NotAuthorized;
+            });
+          };
+          case (?permissions) {
+            let hasPermission = Array.find<Principal>(
+              permissions.canGet,
+              func (x : Principal) : Bool {
+                return x == caller;
+              }
+            );
+            if (Option.isSome(hasPermission)) {
+              return #ok({invoice = i});
+            } else {
+              return #err({
+                message = ?"You do not have permission to view this invoice";
+                kind = #NotAuthorized;
+              });
+            };
+          };
+        };
         #ok({invoice = i});
       };
     };
@@ -160,8 +194,8 @@ actor Invoice {
   public shared ({caller}) func get_balance (args : T.GetBalanceArgs) : async T.GetBalanceResult {
     let token = args.token;
     let canisterId = Principal.fromActor(Invoice);
-    switch(token.symbol){
-      case("ICP"){
+    switch (token.symbol) {
+      case "ICP" {
         let defaultAccount = Hex.encode(
           Blob.toArray(
             U.getDefaultAccount({
@@ -171,23 +205,20 @@ actor Invoice {
          )
         );
         let balance = await ICP.balance({account = defaultAccount});
-        switch(balance){
-          case(#err err){
+        switch(balance) {
+          case (#err err) {
             #err({
               message = ?"Could not get balance";
               kind = #NotFound;
             });
           };
-          case(#ok result){
+          case (#ok result){
             #ok({balance = result.balance});
           };
         };
       };
-      case(_){
-        #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+      case _ {
+        errInvalidToken;
       };
     };
   };
@@ -198,46 +229,69 @@ actor Invoice {
     let invoice = invoices.get(args.id);
     let canisterId = Principal.fromActor(Invoice);
 
-    switch(invoice){
-      case(null){
+    switch invoice {
+      case null{
         #err({
           message = ?"Invoice not found";
           kind = #NotFound;
         });
       };
-      case(? i){
+      case (?i) {
         // Return if already verified
-        if (i.verifiedAtTime != null){
-          return #ok(#AlreadyVerified{
+        if (i.verifiedAtTime != null) {
+          return #ok(#AlreadyVerified {
             invoice = i;
           });
         };
+        if (i.creator != caller) {
+          switch (i.permissions) {
+            case null {
+              return #err({
+                message = ?"You do not have permission to verify this invoice";
+                kind = #NotAuthorized;
+              });
+            };
+            case (?permissions) {
+              let hasPermission = Array.find<Principal>(
+                permissions.canVerify,
+                func (x : Principal) : Bool {
+                  return x == caller;
+                }
+              );
+              if (Option.isSome(hasPermission)) {
+                // May proceed
+              } else {
+                return #err({
+                  message = ?"You do not have permission to verify this invoice";
+                  kind = #NotAuthorized;
+                });
+              };
+            };
+          };
+        };
 
-        switch (i.token.symbol){
-          case("ICP"){
+        switch (i.token.symbol) {
+          case "ICP" {
             let result : T.VerifyInvoiceResult = await ICP.verifyInvoice({
               invoice = i;
               caller;
               canisterId;
             });
-            switch (result){
-              case(#ok value){
-                switch (value){
-                  case(#AlreadyVerified _){};
-                  case(#Paid paidResult){
+            switch result {
+              case (#ok value) {
+                switch (value) {
+                  case (#AlreadyVerified _) { };
+                  case (#Paid paidResult) {
                     let replaced = invoices.replace(i.id, paidResult.invoice);
                   };
                 };
               };
-              case(#err _){};
+              case (#err _) {};
             };
             result;
           };
-          case(_){
-            #err({
-              message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-              kind = #InvalidToken;
-            });
+          case _ {
+            errInvalidToken;
           };
         };
       };
@@ -248,7 +302,6 @@ actor Invoice {
 // #region Refund Invoice
   public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
     let canisterId = Principal.fromActor(Invoice);
-    let invoice = invoices.get(args.id);
 
     let accountResult = U.accountIdentifierToBlob({
       accountIdentifier = args.refundAccount;
@@ -261,25 +314,39 @@ actor Invoice {
           kind = #InvalidDestination;
         });
       };
-      case (#ok destination){
+      case (#ok destination) {
         let invoice = invoices.get(args.id);
-        switch (invoice){
-          case(null){
+        switch invoice {
+          case null {
             #err({
               message = ?"Invoice not found";
               kind = #NotFound;
             });
           };
-          case(? i){
+          case (?i) {
+            // Return if caller was not the creator
+            if (i.creator != caller) {
+              return #err({
+                message = ?"Only the creator of the invoice can issue a refund";
+                kind = #NotAuthorized;
+              });
+            };
+            // Return if refund amount is greater than the invoice amountPaid
+            if (args.amount > i.amountPaid) {
+              return #err({
+                message = ?"Refund amount cannot be greater than the amount paid";
+                kind = #InvalidAmount;
+              });
+            };
             // Return if already refunded
-            if (i.refundedAtTime != null){
+            if (i.refundedAtTime != null) {
               return #err({
                 message = ?"Invoice already refunded";
                 kind = #AlreadyRefunded;
               });
             };
-            switch(i.token.symbol){
-              case("ICP"){
+            switch (i.token.symbol) {
+              case "ICP" {
                 let transferResult = await ICP.transfer({
                   memo = 0;
                   fee = {
@@ -293,12 +360,13 @@ actor Invoice {
                   to = destination;
                   created_at_time = null;
                 });
-                switch (transferResult) {
+                switch transferResult {
                   case (#ok result) {
                     let updatedInvoice = {
                       id = i.id;
                       creator = i.creator;
                       details = i.details;
+                      permissions = i.permissions;
                       amount = i.amount;
                       amountPaid = i.amountPaid;
                       token = i.token;
@@ -314,20 +382,20 @@ actor Invoice {
                     #ok(result);
                   };
                   case (#err err) {
-                    switch (err.kind){
-                      case (#BadFee f){
+                    switch (err.kind) {
+                      case (#BadFee f) {
                         #err({
                           message = err.message;
                           kind = #BadFee;
                         });
                       };
-                      case (#InsufficientFunds f){
+                      case (#InsufficientFunds f) {
                         #err({
                           message = err.message;
                           kind = #InsufficientFunds;
                         });
                       };
-                      case (_){
+                      case _ {
                         #err({
                           message = err.message;
                           kind = #Other;
@@ -337,11 +405,8 @@ actor Invoice {
                   };
                 };
               };
-              case(_){
-                #err({
-                  message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-                  kind = #InvalidToken;
-                });
+              case _ {
+                errInvalidToken;
               };
             }
           };
@@ -358,18 +423,17 @@ actor Invoice {
       accountIdentifier = args.destination;
       canisterId = ?Principal.fromActor(Invoice);
     });
-    switch (accountResult){
-      case (#err err){
+    switch (accountResult) {
+      case (#err err) {
         #err({
           message = err.message;
           kind = #InvalidDestination;
         });
       };
-      case (#ok destination){
-        switch(token.symbol){
-          case("ICP"){
+      case (#ok destination) {
+        switch (token.symbol) {
+          case "ICP" {
             let now = Nat64.fromIntWrap(Time.now());
-
 
             let transferResult = await ICP.transfer({
               memo = 0;
@@ -390,20 +454,20 @@ actor Invoice {
                 #ok(result);
               };
               case (#err err) {
-                switch (err.kind){
-                  case (#BadFee _){
+                switch (err.kind) {
+                  case (#BadFee _) {
                     #err({
                       message = err.message;
                       kind = #BadFee;
                     });
                   };
-                  case (#InsufficientFunds _){
+                  case (#InsufficientFunds _) {
                     #err({
                       message = err.message;
                       kind = #InsufficientFunds;
                     });
                   };
-                  case (_){
+                  case _ {
                     #err({
                       message = err.message;
                       kind = #Other;
@@ -413,11 +477,8 @@ actor Invoice {
               };
             };
           };
-          case(_){
-            #err({
-              message = ?"Token not supported";
-              kind = #InvalidToken;
-            });
+          case _ {
+            errInvalidToken;
           };
         };
       };
@@ -435,8 +496,8 @@ actor Invoice {
     let token = args.token;
     let principal = args.principal;
     let canisterId = Principal.fromActor(Invoice);
-    switch(token.symbol){
-      case("ICP"){
+    switch (token.symbol) {
+      case "ICP" {
         let subaccount = U.getDefaultAccount({principal; canisterId;});
         let hexEncoded = Hex.encode(
           Blob.toArray(subaccount)
@@ -444,11 +505,8 @@ actor Invoice {
         let result : AccountIdentifier = #text(hexEncoded);
         #ok({accountIdentifier = result});
       };
-      case(_){
-        #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+      case _ {
+        errInvalidToken;
       };
     };
   };
@@ -458,6 +516,7 @@ actor Invoice {
   public query func remaining_cycles() : async Nat {
     Cycles.balance()
   };
+
   public func accountIdentifierToBlob (accountIdentifier : AccountIdentifier) : async T.AccountIdentifierToBlobResult {
     U.accountIdentifierToBlob({
       accountIdentifier;
@@ -468,8 +527,7 @@ actor Invoice {
 
 // #region Upgrade Hooks
   system func preupgrade() {
-      entries := Iter.toArray(invoices.entries());
+    entries := Iter.toArray(invoices.entries());
   };
-
 // #endregion
 }

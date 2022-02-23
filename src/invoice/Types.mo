@@ -25,10 +25,15 @@ module {
     description : Text;
     meta : Blob;
   };
+  public type Permissions = {
+      canGet : [Principal];
+      canVerify : [Principal];
+  };
   public type Invoice = {
     id : Nat;
     creator : Principal;
     details : ?Details;
+    permissions : ?Permissions;
     amount : Nat;
     amountPaid : Nat;
     token : TokenVerbose;
@@ -50,6 +55,7 @@ module {
   public type CreateInvoiceArgs = {
     amount : Nat;
     token : Token;
+    permissions: ?Permissions;
     details : ?Details;
   };
   public type CreateInvoiceResult = Result.Result<CreateInvoiceSuccess, CreateInvoiceErr>;
@@ -101,6 +107,7 @@ module {
     kind : {
       #InvalidInvoiceId;
       #NotFound;
+      #NotAuthorized;
       #Other;
     };
   };
@@ -143,6 +150,7 @@ module {
       #InvalidInvoiceId;
       #NotFound;
       #NotYetPaid;
+      #NotAuthorized;
       #Expired;
       #TransferError;
       #InvalidToken;
@@ -212,7 +220,9 @@ module {
       #TransferError;
       #InsufficientFunds;
       #InvalidToken;
+      #InvalidAmount;
       #AlreadyRefunded;
+      #NotAuthorized;
       #BadFee;
       #Other;
     };

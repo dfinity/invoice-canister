@@ -69,6 +69,7 @@ actor InvoiceMock {
           id;
           creator = caller;
           details = args.details;
+          permissions = args.permissions;
           amount = args.amount;
           amountPaid = 0;
           token;
@@ -236,21 +237,6 @@ actor InvoiceMock {
                   };
                   case (? balance){
                     if(balance < i.amount){
-                      let updatedInvoice = {
-                        id = i.id;
-                        creator = i.creator;
-                        details = i.details;
-                        amount = i.amount;
-                        // Update invoice with latest balance
-                        amountPaid = balance;
-                        token = i.token;
-                        verifiedAtTime = i.verifiedAtTime;
-                        paid = false;
-                        refunded = false;
-                        expiration = i.expiration;
-                        destination = i.destination;
-                        refundAccount = i.refundAccount;
-                      };
                       return #err({
                         message = ?Text.concat("Insufficient balance. Current Balance is ", Nat.toText(balance));
                         kind = #NotYetPaid;
@@ -262,6 +248,7 @@ actor InvoiceMock {
                       id = i.id;
                       creator = i.creator;
                       details = i.details;
+                      permissions = i.permissions;
                       amount = i.amount;
                       // update amountPaid
                       amountPaid = balance;
@@ -321,7 +308,6 @@ actor InvoiceMock {
 // #region Refund Invoice
   public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
     let canisterId = Principal.fromActor(InvoiceMock);
-    let invoice = invoices.get(args.id);
 
     let accountResult = U.accountIdentifierToBlob({
       accountIdentifier = args.refundAccount;
@@ -344,6 +330,20 @@ actor InvoiceMock {
             });
           };
           case(? i){
+            // Return if caller was not the creator
+            if (i.creator != caller){
+              return #err({
+                message = ?"Only the creator of the invoice can issue a refund";
+                kind = #NotAuthorized;
+              });
+            };
+            // Return if refund amount is greater than the invoice amountPaid
+            if (args.amount > i.amountPaid){
+              return #err({
+                message = ?"Refund amount cannot be greater than the amount paid";
+                kind = #InvalidAmount;
+              });
+            };
             // Return if already refunded
             if (i.refundedAtTime != null){
               return #err({
@@ -372,6 +372,7 @@ actor InvoiceMock {
                       id = i.id;
                       creator = i.creator;
                       details = i.details;
+                      permissions = i.permissions;
                       amount = i.amount;
                       amountPaid = i.amountPaid;
                       token = i.token;

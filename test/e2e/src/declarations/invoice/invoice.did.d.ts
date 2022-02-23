@@ -16,6 +16,7 @@ export type AccountIdentifier__1 = { 'principal' : Principal } |
   { 'blob' : Array<number> } |
   { 'text' : string };
 export interface CreateInvoiceArgs {
+  'permissions' : [] | [Permissions],
   'token' : Token,
   'details' : [] | [Details],
   'amount' : bigint,
@@ -61,6 +62,7 @@ export interface GetBalanceSuccess { 'balance' : bigint }
 export interface GetInvoiceArgs { 'id' : bigint }
 export interface GetInvoiceErr {
   'kind' : { 'NotFound' : null } |
+    { 'NotAuthorized' : null } |
     { 'InvalidInvoiceId' : null } |
     { 'Other' : null },
   'message' : [] | [string],
@@ -70,6 +72,7 @@ export type GetInvoiceResult = { 'ok' : GetInvoiceSuccess } |
 export interface GetInvoiceSuccess { 'invoice' : Invoice }
 export interface Invoice {
   'id' : bigint,
+  'permissions' : [] | [Permissions],
   'creator' : Principal,
   'destination' : AccountIdentifier,
   'token' : TokenVerbose,
@@ -83,6 +86,10 @@ export interface Invoice {
   'details' : [] | [Details],
   'amount' : bigint,
 }
+export interface Permissions {
+  'canGet' : Array<Principal>,
+  'canVerify' : Array<Principal>,
+}
 export interface RefundInvoiceArgs {
   'id' : bigint,
   'refundAccount' : AccountIdentifier,
@@ -92,6 +99,7 @@ export interface RefundInvoiceErr {
   'kind' : { 'InvalidDestination' : null } |
     { 'TransferError' : null } |
     { 'NotFound' : null } |
+    { 'NotAuthorized' : null } |
     { 'BadFee' : null } |
     { 'InvalidToken' : null } |
     { 'InvalidInvoiceId' : null } |
@@ -132,6 +140,7 @@ export interface VerifyInvoiceErr {
   'kind' : { 'InvalidAccount' : null } |
     { 'TransferError' : null } |
     { 'NotFound' : null } |
+    { 'NotAuthorized' : null } |
     { 'InvalidToken' : null } |
     { 'InvalidInvoiceId' : null } |
     { 'Other' : null } |

@@ -24,6 +24,7 @@ actor Seller {
       token = {
         symbol = "ICP";
       };
+      permissions = null;
       details = ?{
         description = "Example license certifying status";
         // JSON string as a blob
