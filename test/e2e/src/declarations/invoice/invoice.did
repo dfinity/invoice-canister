@@ -57,36 +57,6 @@ type TokenVerbose =
  };
 type Token = record {symbol: text;};
 type Time = int;
-type RefundInvoiceSuccess = record {blockHeight: nat64;};
-type RefundInvoiceResult = 
- variant {
-   err: RefundInvoiceErr;
-   ok: RefundInvoiceSuccess;
- };
-type RefundInvoiceErr = 
- record {
-   kind:
-    variant {
-      AlreadyRefunded;
-      BadFee;
-      InsufficientFunds;
-      InvalidDestination;
-      InvalidInvoiceId;
-      InvalidToken;
-      NotAuthorized;
-      NotFound;
-      NotYetPaid;
-      Other;
-      TransferError;
-    };
-   message: opt text;
- };
-type RefundInvoiceArgs = 
- record {
-   amount: nat;
-   id: nat;
-   refundAccount: AccountIdentifier;
- };
 type Permissions = 
  record {
    canGet: vec principal;
@@ -103,9 +73,6 @@ type Invoice =
    id: nat;
    paid: bool;
    permissions: opt Permissions;
-   refundAccount: opt AccountIdentifier;
-   refunded: bool;
-   refundedAtTime: opt Time;
    token: TokenVerbose;
    verifiedAtTime: opt Time;
  };
@@ -226,7 +193,6 @@ service : {
    (GetAccountIdentifierResult) query;
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
   get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult) query;
-  refund_invoice: (RefundInvoiceArgs) -> (RefundInvoiceResult);
   remaining_cycles: () -> (nat) query;
   transfer: (TransferArgs) -> (TransferResult);
   verify_invoice: (VerifyInvoiceArgs) -> (VerifyInvoiceResult);

@@ -74,13 +74,10 @@ actor InvoiceMock {
           amountPaid = 0;
           token;
           verifiedAtTime = null;
-          refundedAtTime = null;
           paid = false;
-          refunded = false;
           // 1 week in nanoseconds
           expiration = Time.now() + (1000 * 60 * 60 * 24 * 7);
           destination;
-          refundAccount = null;
         };
     
         invoices.put(id, invoice);
@@ -255,13 +252,10 @@ actor InvoiceMock {
                       token = i.token;
                       // update verifiedAtTime
                       verifiedAtTime;
-                      refundedAtTime = i.refundedAtTime;
                       // update paid
                       paid = true;
-                      refunded = false;
                       expiration = i.expiration;
                       destination = i.destination;
-                      refundAccount = i.refundAccount;
                     };
 
                     // TODO Transfer funds to default subaccount of invoice creator
@@ -298,126 +292,6 @@ actor InvoiceMock {
               message = ?"This token is not yet supported. Currently, this canister supports ICP.";
               kind = #InvalidToken;
             });
-          };
-        };
-      };
-    };
-  };
-// #endregion
-
-// #region Refund Invoice
-  public shared ({caller}) func refund_invoice (args : T.RefundInvoiceArgs) : async T.RefundInvoiceResult {
-    let canisterId = Principal.fromActor(InvoiceMock);
-
-    let accountResult = U.accountIdentifierToBlob({
-      accountIdentifier = args.refundAccount;
-      canisterId = ?canisterId;
-    });
-    switch(accountResult){
-      case(#err err){
-        return #err({
-          message = err.message;
-          kind = #InvalidDestination;
-        });
-      };
-      case (#ok destination){
-        let invoice = invoices.get(args.id);
-        switch (invoice){
-          case(null){
-            return #err({
-              message = ?"Invoice not found";
-              kind = #NotFound;
-            });
-          };
-          case(? i){
-            // Return if caller was not the creator
-            if (i.creator != caller){
-              return #err({
-                message = ?"Only the creator of the invoice can issue a refund";
-                kind = #NotAuthorized;
-              });
-            };
-            // Return if refund amount is greater than the invoice amountPaid
-            if (args.amount > i.amountPaid){
-              return #err({
-                message = ?"Refund amount cannot be greater than the amount paid";
-                kind = #InvalidAmount;
-              });
-            };
-            // Return if already refunded
-            if (i.refundedAtTime != null){
-              return #err({
-                message = ?"Invoice already refunded";
-                kind = #AlreadyRefunded;
-              });
-            };
-            switch(i.token.symbol){
-              case("ICP"){
-                let transferResult = await mockICPTransfer({
-                  memo = 0;
-                  fee = {
-                    e8s = 10000;
-                  };
-                  amount = {
-                    // Total amount, minus the fee
-                    e8s = Nat64.sub(Nat64.fromNat(args.amount), 10000);
-                  };
-                  from_subaccount = ?A.principalToSubaccount(caller);
-                  to = #blob(destination);
-                  created_at_time = null;
-                });
-                switch (transferResult) {
-                  case (#ok result) {
-                    let updatedInvoice = {
-                      id = i.id;
-                      creator = i.creator;
-                      details = i.details;
-                      permissions = i.permissions;
-                      amount = i.amount;
-                      amountPaid = i.amountPaid;
-                      token = i.token;
-                      verifiedAtTime = i.verifiedAtTime;
-                      refundedAtTime = ?Time.now();
-                      paid = i.paid;
-                      refunded = true;
-                      expiration = i.expiration;
-                      destination = i.destination;
-                      refundAccount = ?#blob(destination);
-                    };
-                    let replaced = invoices.put(i.id, updatedInvoice);
-                    return #ok(result);
-                  };
-                  case (#err err) {
-                    switch (err.kind){
-                      case (#BadFee f){
-                        return #err({
-                          message = err.message;
-                          kind = #BadFee;
-                        });
-                      };
-                      case (#InsufficientFunds f){
-                        return #err({
-                          message = err.message;
-                          kind = #InsufficientFunds;
-                        });
-                      };
-                      case (_){
-                        return #err({
-                          message = err.message;
-                          kind = #Other;
-                        });
-                      }
-                    };
-                  };
-                };
-              };
-              case(_){
-                return #err({
-                  message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-                  kind = #InvalidToken;
-                });
-              };
-            }
           };
         };
       };
