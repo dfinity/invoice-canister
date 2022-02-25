@@ -41,6 +41,7 @@ jobs:
           curl --location --output vessel-macos "https://github.com/dfinity/vessel/releases/download/v0.6.2/vessel-macos"
           mkdir $HOME/bin
           mv ./vessel-macos $HOME/bin/vessel
+          chown -R "$(whoami)" $HOME/bin && chmod -R +x $HOME/bin
           echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Run install canisters
