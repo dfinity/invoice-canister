@@ -1,0 +1,67 @@
+name: Node.js CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+  push:
+    branches:
+      - github-actions
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04]
+        ghc: ['8.8.4']
+        spec:
+          - '0.16.1'
+        node:
+          - 16
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+
+      - run: npm install -g npm
+
+      - run: echo y | DFX_VERSION=0.8.5 sh -ci "$(curl -fsSL https://sdk.dfinity.org/install.sh)"
+
+      - name: Run install canisters
+        run: |
+          set -x
+          dfx start --background --clean
+          dfx identity new minter
+          dfx identity use minter
+          export MINT_ACC=$(dfx ledger account-id)
+
+          dfx identity use default
+          export LEDGER_ACC=$(dfx ledger account-id)
+          export TEST_ACC="cd60093cef12e11d7b8e791448023348103855f682041e93f7d0be451f48118b"
+          rm src/ledger/ledger.did
+          cp src/ledger/ledger.private.did src/ledger/ledger.did
+
+          dfx deploy ledger --argument '(record {minting_account = "'${MINT_ACC}'"; initial_values = vec { record { "'${LEDGER_ACC}'"; record { e8s=100_000_000_000 } }; record { "'${TEST_ACC}'"; record { e8s=100_000_000_000 } }; }; send_whitelist = vec {}})'
+
+          # Replace with public api
+          rm src/ledger/ledger.did
+          cp src/ledger/ledger.public.did src/ledger/ledger.did
+
+          dfx deploy invoice
+        
+      - name: Run e2e tests
+        run: |
+          npm run test
+
+      - name: clean up
+        run: |
+          killall mitmdump
+          killall ic-ref
