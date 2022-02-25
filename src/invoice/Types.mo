@@ -200,6 +200,26 @@ module {
   };
 // #endregion
 
+// #region consolidate_invoice_account
+  public type ConsolidateInvoiceAccountArgs = {
+    invoiceId: Nat;
+  };
+  public type ConsolidateInvoiceAccountResult = Result.Result<ConsolidateInvoiceAccountSuccess, ConsolidateInvoiceAccountErr>;
+  public type ConsolidateInvoiceAccountSuccess = {
+    accountIdentifier : AccountIdentifier;
+    amountConsolidated : Nat;
+  };
+  public type ConsolidateInvoiceAccountErr = {
+    message : ?Text;
+    kind : {
+      #AccountEmpty;
+      #NotFound;
+      #NotAuthorized
+      #Other;
+    };
+  };
+// endregion
+
 // #region refund_invoice
   public type RefundInvoiceArgs = {
     id : Nat;

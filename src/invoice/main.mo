@@ -512,6 +512,109 @@ actor Invoice {
   };
 // #endregion
 
+// #region consolidate_invoice_account
+  /*
+    * Consolidate Account
+    * Allows a caller to consolidate any accidental overpayment for a specific token.
+    */
+  public shared ({caller}) func consolidate_invoice_account (args : T.ConsolidateInvoiceAccountArgs) : async T.ConsolidateInvoiceAccountResult {
+    let invoice = invoices.get(args.id);
+    switch invoice {
+      case null {
+        #err({
+          message = ?"Invoice not found";
+          kind = #NotFound;
+        });
+      };
+      case (?i) {
+        // Return if caller was not the creator
+        if (i.creator != caller) {
+          return #err({
+            message = ?"Only the creator of the invoice can consolidate the account";
+            kind = #NotAuthorized;
+          });
+        };
+        switch (i.token.symbol) {
+          case "ICP" {
+            let balanceResult = await ICP.balance({
+              account = accountIdentifierToText(i.destination);
+            });
+            switch balanceResult {
+              case (#ok balance) {
+                let transferResult = await ICP.transfer({
+                  memo = 0;
+                  fee = {
+                    e8s = 10000;
+                  };
+                  amount = {
+                    e8s = Nat64.fromNat(balance.balance);
+                  };
+                  from_subaccount = ?A.principalToSubaccount(caller);
+                  to = i.destination;
+                  created_at_time = null;
+                });
+                switch transferResult {
+                  case (#ok result) {
+                    let updatedInvoice = {
+                      id = i.id;
+                      creator = i.creator;
+                      details = i.details;
+                      permissions = i.permissions;
+                      amount = i.amount;
+                      amountPaid = i.amountPaid;
+                      token = i.token;
+                      verifiedAtTime = i.verifiedAtTime;
+                      refundedAtTime = i.refundedAtTime;
+                      paid = i.paid;
+                      refunded = i.refunded;
+                      expiration = i.expiration;
+                      destination = i.destination;
+                      refundAccount = i.refundAccount;
+                    };
+                    let replaced = invoices.put(i.id, updatedInvoice);
+                    #ok(result);
+                  };
+                  case (#err err) {
+                    switch (err.kind) {
+                      case (#BadFee f) {
+                        #err({
+                          message = err.message;
+                          kind = #BadFee;
+                        });
+                      };
+                      case (#InsufficientFunds f) {
+                        #err({
+                          message = err.message;
+                          kind = #InsufficientFunds;
+                        });
+                      };
+                      case _ {
+                        #err({
+                          message = err.message;
+                          kind = #Other;
+                        });
+                      }
+                    };
+                  };
+                };
+              };
+              case (#err err) {
+                switch (err.kind) {
+                  case (#NotFound _) {
+                    #err({
+                      message = err.message;
+                      kind = #NotFound;
+                    });
+                  };
+                  case _ {
+                    #err({
+                      message = err.message;
+                      kind = #Other;
+                    });
+                  };
+                };
+  
+
 // #region Utils
   public query func remaining_cycles() : async Nat {
     Cycles.balance()
