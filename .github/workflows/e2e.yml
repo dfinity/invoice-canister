@@ -7,9 +7,6 @@ on:
       - reopened
       - edited
       - synchronize
-  push:
-    branches:
-      - github-actions
 
 jobs:
   test:
@@ -48,8 +45,3 @@ jobs:
         run: |
           set -x
           make e2e
-
-      - name: clean up
-        run: |
-          killall mitmdump
-          killall ic-ref
