@@ -41,7 +41,7 @@ jobs:
           chown -R "$(whoami)" $HOME/bin && chmod -R +x $HOME/bin
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Run install canisters
+      - name: Run make e2e
         run: |
           set -x
           make e2e
