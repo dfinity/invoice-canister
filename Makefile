@@ -11,7 +11,7 @@ docs:
 	$(shell vessel bin)/mo-doc
 
 test:
-	moc -r $(shell vessel sources) -wasi-system-api test/unit/Test.mo
+	$(shell vessel bin)/moc -r $(shell vessel sources) -wasi-system-api test/unit/Test.mo
 
 e2e:
 	./install-local.sh
