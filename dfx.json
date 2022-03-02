@@ -21,6 +21,12 @@
             "packtool": "vessel sources"
         }
     },
+    "networks": {
+        "local": {
+            "bind": "0.0.0.0:8000",
+            "type": "ephemeral"
+        }
+    },
     "dfx": "0.8.5",
     "version": 1
 }
