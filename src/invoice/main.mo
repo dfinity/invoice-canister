@@ -37,10 +37,10 @@ actor Invoice {
 */
 
 // #region State
-  stable var invoiceCounter : Nat = 0;
   stable var entries : [(Nat, Invoice)] = [];
   let invoices : HashMap.HashMap<Nat, Invoice> = HashMap.fromIter(Iter.fromArray(entries), entries.size(), Nat.equal, Hash.hash);
   entries := [];
+  let MAX_INVOICES = 30_000;
 // #endregion
 
 /**
@@ -49,9 +49,22 @@ actor Invoice {
 
 // #region Create Invoice
   public shared ({caller}) func create_invoice (args : T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
-    let id : Nat = invoiceCounter;
-    // increment counter
-    invoiceCounter += 1;
+    let inputsValid = areInputsValid(args);
+    if(not inputsValid) {
+      return #err({
+        message = ?"Bad size: one or more of your inputs exceeds the allowed size.";
+        kind = #BadSize;
+      });
+    };
+
+    let id : Nat = invoices.size() + 1;
+
+    if(id > MAX_INVOICES){
+      return #err({
+        message = ?"The maximum number of invoices has been reached.";
+        kind = #MaxInvoicesReached;
+      });
+    };
 
     let destinationResult : T.GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({
       token = args.token;
@@ -114,6 +127,35 @@ actor Invoice {
         }
       };
     };
+  };
+
+  func areInputsValid(args : T.CreateInvoiceArgs) : Bool {
+    let token = getTokenVerbose(args.token);
+
+    var isValid = true;
+
+    switch (args.details){
+      case null {};
+      case (? details){
+        if (details.meta.size() > 32_000) {
+          isValid := false;
+        };
+        if (details.description.size() > 256) {
+          isValid := false;
+        };
+      };
+    };
+
+    switch (args.permissions){
+      case null {};
+      case (? permissions){
+        if (permissions.canGet.size() > 256 or permissions.canVerify.size() > 256) {
+          isValid := false;
+        };
+      };
+    };
+
+    return isValid;
   };
 
 // #region Get Destination Account Identifier

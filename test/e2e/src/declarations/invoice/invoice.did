@@ -144,6 +144,7 @@ type CreateInvoiceErr =
  record {
    kind:
     variant {
+      BadSize;
       InvalidAmount;
       InvalidDestination;
       InvalidDetails;

@@ -25,6 +25,7 @@ export interface CreateInvoiceErr {
   'kind' : { 'InvalidDetails' : null } |
     { 'InvalidAmount' : null } |
     { 'InvalidDestination' : null } |
+    { 'BadSize' : null } |
     { 'InvalidToken' : null } |
     { 'Other' : null },
   'message' : [] | [string],
