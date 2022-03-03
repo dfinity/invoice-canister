@@ -38,12 +38,9 @@ module {
     amountPaid : Nat;
     token : TokenVerbose;
     verifiedAtTime : ?Time.Time;
-    refundedAtTime : ?Time.Time;
     paid : Bool;
-    refunded : Bool;
     expiration : Time.Time;
     destination : AccountIdentifier;
-    refundAccount : ?AccountIdentifier;
   };
 // #endregion
 
@@ -195,35 +192,6 @@ module {
     message : ?Text;
     kind : {
       #InvalidToken;
-      #Other;
-    };
-  };
-// #endregion
-
-// #region refund_invoice
-  public type RefundInvoiceArgs = {
-    id : Nat;
-    refundAccount : AccountIdentifier;
-    amount : Nat;
-  };
-  public type RefundInvoiceResult = Result.Result<RefundInvoiceSuccess, RefundInvoiceErr>;
-  public type RefundInvoiceSuccess = {
-    blockHeight : Nat64;
-  };
-  public type RefundInvoiceErr = {
-    message : ?Text;
-    kind : {
-      #InvalidInvoiceId;
-      #NotFound;
-      #NotYetPaid;
-      #InvalidDestination;
-      #TransferError;
-      #InsufficientFunds;
-      #InvalidToken;
-      #InvalidAmount;
-      #AlreadyRefunded;
-      #NotAuthorized;
-      #BadFee;
       #Other;
     };
   };

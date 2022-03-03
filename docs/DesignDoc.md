@@ -45,6 +45,7 @@ type VerifyInvoiceErr =
       InvalidAccount;
       InvalidInvoiceId;
       InvalidToken;
+      NotAuthorized;
       NotFound;
       NotYetPaid;
       Other;
@@ -85,34 +86,10 @@ type TokenVerbose =
  };
 type Token = record {symbol: text;};
 type Time = int;
-type RefundInvoiceSuccess = record {blockHeight: nat64;};
-type RefundInvoiceResult = 
- variant {
-   err: RefundInvoiceErr;
-   ok: RefundInvoiceSuccess;
- };
-type RefundInvoiceErr = 
+type Permissions = 
  record {
-   kind:
-    variant {
-      AlreadyRefunded;
-      BadFee;
-      InsufficientFunds;
-      InvalidDestination;
-      InvalidInvoiceId;
-      InvalidToken;
-      NotFound;
-      NotYetPaid;
-      Other;
-      TransferError;
-    };
-   message: opt text;
- };
-type RefundInvoiceArgs = 
- record {
-   amount: nat;
-   id: nat;
-   refundAccount: AccountIdentifier;
+   canGet: vec principal;
+   canVerify: vec principal;
  };
 type Invoice = 
  record {
@@ -124,9 +101,7 @@ type Invoice =
    expiration: Time;
    id: nat;
    paid: bool;
-   refundAccount: opt AccountIdentifier;
-   refunded: bool;
-   refundedAtTime: opt Time;
+   permissions: opt Permissions;
    token: TokenVerbose;
    verifiedAtTime: opt Time;
  };
@@ -140,6 +115,7 @@ type GetInvoiceErr =
  record {
    kind: variant {
            InvalidInvoiceId;
+           NotAuthorized;
            NotFound;
            Other;
          };
@@ -209,6 +185,7 @@ type CreateInvoiceArgs =
  record {
    amount: nat;
    details: opt Details;
+   permissions: opt Permissions;
    token: Token;
  };
 type AccountIdentifier__1 = 
@@ -244,12 +221,12 @@ service : {
   get_account_identifier: (GetAccountIdentifierArgs) ->
    (GetAccountIdentifierResult) query;
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
-  get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult);
-  refund_invoice: (RefundInvoiceArgs) -> (RefundInvoiceResult);
+  get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult) query;
   remaining_cycles: () -> (nat) query;
   transfer: (TransferArgs) -> (TransferResult);
   verify_invoice: (VerifyInvoiceArgs) -> (VerifyInvoiceResult);
 }
+
 
 ```
 

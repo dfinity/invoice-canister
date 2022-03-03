@@ -220,13 +220,10 @@ module {
                   token = i.token;
                   // update verifiedAtTime
                   verifiedAtTime;
-                  refundedAtTime = i.refundedAtTime;
                   // update paid
                   paid = true; // since transfer has succeeded
-                  refunded = false;
                   expiration = i.expiration;
                   destination = i.destination;
-                  refundAccount = i.refundAccount;
                 };
 
                 #ok(#Paid {
