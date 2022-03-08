@@ -38,6 +38,7 @@ actor Invoice {
 
 // #region State
   stable var entries : [(Nat, Invoice)] = [];
+  stable var invoiceCounter : Nat = 0;
   let invoices : HashMap.HashMap<Nat, Invoice> = HashMap.fromIter(Iter.fromArray(entries), entries.size(), Nat.equal, Hash.hash);
   entries := [];
   let MAX_INVOICES = 30_000;
@@ -49,6 +50,9 @@ actor Invoice {
 
 // #region Create Invoice
   public shared ({caller}) func create_invoice (args : T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
+    let id : Nat = invoiceCounter;
+    // increment counter
+    invoiceCounter += 1;
     let inputsValid = areInputsValid(args);
     if(not inputsValid) {
       return #err({
@@ -56,8 +60,6 @@ actor Invoice {
         kind = #BadSize;
       });
     };
-
-    let id : Nat = invoices.size() + 1;
 
     if(id > MAX_INVOICES){
       return #err({

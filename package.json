@@ -19,6 +19,7 @@
     "bignumber.js": "^9.0.2",
     "borc": "^2.1.2",
     "buffer": "^5.7.1",
+    "cli-progress": "^3.10.0",
     "commander": "^2.20.3",
     "data-uri-to-buffer": "^4.0.0",
     "delimit-stream": "^0.1.0",
@@ -55,5 +56,9 @@
   "bugs": {
     "url": "https://github.com/dfinity/invoice-canister/issues"
   },
-  "homepage": "https://github.com/dfinity/invoice-canister#readme"
+  "homepage": "https://github.com/dfinity/invoice-canister#readme",
+  "devDependencies": {
+    "@babel/core": "^7.17.5",
+    "@babel/node": "^7.16.8"
+  }
 }

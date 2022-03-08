@@ -149,6 +149,7 @@ type CreateInvoiceErr =
       InvalidDestination;
       InvalidDetails;
       InvalidToken;
+      MaxInvoicesReached;
       Other;
     };
    message: opt text;
