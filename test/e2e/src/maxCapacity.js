@@ -10,25 +10,26 @@ const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 const encoder = new TextEncoder();
 
 const { exec } = require("child_process");
-(async () => {
-  // const canisterId = await new Promise((resolve, reject) => {
-  //   exec("dfx canister id invoice", (err, result) => {
-  //     if (err) {
-  //       reject(err);
-  //     }
-  //     resolve(result.trim());
-  //   });
-  // });
-  const canisterId = "r7inp-6aaaa-aaaaa-aaabq-cai";
-  const randomActor = () => {
+const run = async () => {
+  const canisterId = await new Promise((resolve, reject) => {
+    exec("dfx canister id invoice", (err, result) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(result.trim());
+    });
+  });
+  // const canisterId = "r7inp-6aaaa-aaaaa-aaabq-cai";
+  const randomActor = async () => {
     const identity = Secp256k1KeyIdentity.generate();
-    return createActor(canisterId, {
+    const actor = createActor(canisterId, {
       agentOptions: {
         identity,
         fetch: fetch,
-        host: "https://ic0.app",
+        host: "http://localhost:8000",
       },
     });
+    return actor;
   };
 
   const excessiveCanGet = {
@@ -57,7 +58,7 @@ const { exec } = require("child_process");
     details: [
       {
         description: new Array(256).fill("a").join(""),
-        meta: new Array(320).fill(0),
+        meta: new Array(32_000).fill(0),
       },
     ],
     permissions: [
@@ -68,34 +69,41 @@ const { exec } = require("child_process");
     ],
   };
 
-  (async () => {
-    bar1.start(8_000, 0);
+  bar1.start(7_500, 0);
 
-    let count = 0;
-    for (let index = 0; index < 8_000; index++) {
-      let result = await defaultActor.create_invoice(maxCapacity);
-      count += 1;
-      bar1.update(count);
-      if (!result.ok) {
+  let count = 0;
+  // Save one batch for the end
+  for (let index = 0; index < 749; index++) {
+    // let result = defaultActor.create_invoice(maxCapacity);
+    // count += 1;
+    // bar1.update(count);
+    // if (!result.ok) {
+    //   break;
+    // }
+    try {
+      let promises = [];
+      for (let i = 0; i < 10; i++) {
+        promises.push((await randomActor()).create_invoice(maxCapacity));
+      }
+      let resolved = await Promise.all(promises);
+      let foundError = resolved.find((item) => {
+        return !!item.err;
+      });
+      if (foundError) {
+        bar1.stop;
+        console.error(foundError);
         break;
       }
-      // try {
-      //   let promises = [];
-      //   for (let i = 0; i < 10; i++) {
-      //     promises.push(randomActor().create_invoice(maxCapacity));
-      //   }
-      //   await Promise.all(promises);
-      //   count += 10;
-      //   bar1.update(count);
-      // } catch (error) {
-      //   console.error(error);
-      // }
+      count += 10;
+      bar1.update(count);
+    } catch (error) {
+      console.error(error);
     }
+  }
 
-    const lastSuccessful = await defaultActor.create_invoice(maxCapacity);
-    console.log(lastSuccessful);
-
-    // const shouldFail = await defaultActor.create_invoice(maxCapacity);
-    // console.log(shouldFail);
-  })();
-})();
+  bar1.stop();
+  console.log("Nearly complete. Creating one more invoice to verify");
+  const lastInvoice = await defaultActor.create_invoice(maxCapacity);
+  console.log(lastInvoice);
+};
+run();
