@@ -9,6 +9,7 @@ import Blob       "mo:base/Blob";
 import Buffer     "mo:base/Buffer";
 import Error      "mo:base/Error";
 import Nat8       "mo:base/Nat8";
+import Nat32      "mo:base/Nat32";
 import Principal  "mo:base/Principal";
 import Text       "mo:base/Text";
 
@@ -126,7 +127,8 @@ module {
     // Domain separator
     idHash.write(Blob.toArray(Text.encodeUtf8("invoice-id")));
     // Counter as Nonce
-    idHash.write([Nat8.fromNat(args.id)]);
+    let idBytes = A.beBytes(Nat32.fromNat(args.id));
+    idHash.write(idBytes);
     // Principal of caller
     idHash.write(Blob.toArray(Principal.toBlob(args.caller)));
 

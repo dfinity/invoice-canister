@@ -16,11 +16,7 @@
             "wasm": "src/ledger/ledger.wasm"
         }
     },
-    "defaults": {
-        "build": {
-            "packtool": "vessel sources"
-        }
-    },
+  
     "networks": {
         "local": {
             "bind": "0.0.0.0:8000",

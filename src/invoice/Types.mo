@@ -62,10 +62,12 @@ module {
   public type CreateInvoiceErr = {
     message : ?Text;
     kind : {
+      #BadSize;
       #InvalidToken;
       #InvalidAmount;
       #InvalidDestination;
       #InvalidDetails;
+      #MaxInvoicesReached;
       #Other;
     };
   };

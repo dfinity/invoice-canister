@@ -9,10 +9,5 @@
             "main": "src/seller/main.mo"
         }
     },
-    "defaults": {
-        "build": {
-            "packtool": "vessel sources"
-        }
-    },
     "version": 1
 }

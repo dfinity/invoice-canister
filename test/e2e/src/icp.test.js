@@ -95,19 +95,6 @@ describe("ICP Tests", () => {
    * Invoice Tests
    */
   describe("Invoice Tests", () => {
-    it("should create an invoice", async () => {
-      if ("ok" in createResult) {
-        // Test invoice exists
-        expect(createResult.ok.invoice).toBeTruthy();
-
-        // Test decoding invoice details
-        let metaBlob = Uint8Array.from(createResult.ok.invoice.details[0].meta);
-        let decodedMeta = JSON.parse(String.fromCharCode(...metaBlob));
-        expect(decodedMeta).toStrictEqual(testMeta);
-      } else {
-        throw new Error(createResult.err.message);
-      }
-    });
     it("should allow for querying an invoice by ID", async () => {
       const invoice = await defaultActor.get_invoice({
         id: createResult.ok.invoice.id,

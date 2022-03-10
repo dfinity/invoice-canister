@@ -61,6 +61,8 @@ export const idlFactory = ({ IDL }) => {
       'InvalidDetails' : IDL.Null,
       'InvalidAmount' : IDL.Null,
       'InvalidDestination' : IDL.Null,
+      'MaxInvoicesReached' : IDL.Null,
+      'BadSize' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'Other' : IDL.Null,
     }),

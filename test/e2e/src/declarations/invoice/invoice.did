@@ -144,10 +144,12 @@ type CreateInvoiceErr =
  record {
    kind:
     variant {
+      BadSize;
       InvalidAmount;
       InvalidDestination;
       InvalidDetails;
       InvalidToken;
+      MaxInvoicesReached;
       Other;
     };
    message: opt text;
