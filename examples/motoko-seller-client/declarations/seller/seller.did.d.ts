@@ -6,6 +6,8 @@ export interface CreateInvoiceErr {
   'kind' : { 'InvalidDetails' : null } |
     { 'InvalidAmount' : null } |
     { 'InvalidDestination' : null } |
+    { 'MaxInvoicesReached' : null } |
+    { 'BadSize' : null } |
     { 'InvalidToken' : null } |
     { 'Other' : null },
   'message' : [] | [string],
@@ -20,13 +22,10 @@ export interface Invoice {
   'creator' : Principal,
   'destination' : AccountIdentifier,
   'token' : TokenVerbose,
-  'refundedAtTime' : [] | [bigint],
   'paid' : boolean,
-  'refunded' : boolean,
   'verifiedAtTime' : [] | [bigint],
   'amountPaid' : bigint,
   'expiration' : bigint,
-  'refundAccount' : [] | [AccountIdentifier],
   'details' : [] | [Details],
   'amount' : bigint,
 }

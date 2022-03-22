@@ -48,13 +48,10 @@ export const idlFactory = ({ IDL }) => {
     'creator' : IDL.Principal,
     'destination' : AccountIdentifier,
     'token' : TokenVerbose,
-    'refundedAtTime' : IDL.Opt(Time),
     'paid' : IDL.Bool,
-    'refunded' : IDL.Bool,
     'verifiedAtTime' : IDL.Opt(Time),
     'amountPaid' : IDL.Nat,
     'expiration' : Time,
-    'refundAccount' : IDL.Opt(AccountIdentifier),
     'details' : IDL.Opt(Details),
     'amount' : IDL.Nat,
   });
@@ -64,6 +61,8 @@ export const idlFactory = ({ IDL }) => {
       'InvalidDetails' : IDL.Null,
       'InvalidAmount' : IDL.Null,
       'InvalidDestination' : IDL.Null,
+      'MaxInvoicesReached' : IDL.Null,
+      'BadSize' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'Other' : IDL.Null,
     }),
@@ -129,33 +128,6 @@ export const idlFactory = ({ IDL }) => {
     'ok' : GetInvoiceSuccess,
     'err' : GetInvoiceErr,
   });
-  const RefundInvoiceArgs = IDL.Record({
-    'id' : IDL.Nat,
-    'refundAccount' : AccountIdentifier,
-    'amount' : IDL.Nat,
-  });
-  const RefundInvoiceSuccess = IDL.Record({ 'blockHeight' : IDL.Nat64 });
-  const RefundInvoiceErr = IDL.Record({
-    'kind' : IDL.Variant({
-      'InvalidAmount' : IDL.Null,
-      'InvalidDestination' : IDL.Null,
-      'TransferError' : IDL.Null,
-      'NotFound' : IDL.Null,
-      'NotAuthorized' : IDL.Null,
-      'BadFee' : IDL.Null,
-      'InvalidToken' : IDL.Null,
-      'InvalidInvoiceId' : IDL.Null,
-      'AlreadyRefunded' : IDL.Null,
-      'Other' : IDL.Null,
-      'NotYetPaid' : IDL.Null,
-      'InsufficientFunds' : IDL.Null,
-    }),
-    'message' : IDL.Opt(IDL.Text),
-  });
-  const RefundInvoiceResult = IDL.Variant({
-    'ok' : RefundInvoiceSuccess,
-    'err' : RefundInvoiceErr,
-  });
   const TransferArgs = IDL.Record({
     'destination' : AccountIdentifier,
     'token' : Token,
@@ -213,8 +185,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),
-    'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], []),
-    'refund_invoice' : IDL.Func([RefundInvoiceArgs], [RefundInvoiceResult], []),
+    'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], ['query']),
     'transfer' : IDL.Func([TransferArgs], [TransferResult], []),
     'verify_invoice' : IDL.Func([VerifyInvoiceArgs], [VerifyInvoiceResult], []),
   });

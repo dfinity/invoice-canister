@@ -3,6 +3,7 @@ import Hex        "../../../../../src/invoice/Hex";
 import T          "../../../../../src/invoice/Types";
 import U          "../../../../../src/invoice/Utils";
 
+import Array      "mo:base/Array";
 import Blob       "mo:base/Blob";
 import Debug      "mo:base/Debug";
 import Hash       "mo:base/Hash";
@@ -10,6 +11,7 @@ import HashMap    "mo:base/HashMap";
 import Iter       "mo:base/Iter";
 import Nat        "mo:base/Nat";
 import Nat64      "mo:base/Nat64";
+import Option     "mo:base/Option";
 import Principal  "mo:base/Principal";
 import Result     "mo:base/Result";
 import Text       "mo:base/Text";
@@ -24,13 +26,19 @@ actor InvoiceMock {
   type Invoice = T.Invoice;
 // #endregion
 
+  let errInvalidToken = #err({
+    message = ?"This token is not yet supported. Currently, this canister supports ICP.";
+    kind = #InvalidToken;
+  });
+
 /**
 * Application State
 */
 
 // #region State
   stable var entries : [(Nat, Invoice)] = [];
-  var invoices: HashMap.HashMap<Nat, Invoice> = HashMap.HashMap(16, Nat.equal, Hash.hash);
+  stable var invoiceCounter : Nat = 0;
+  let invoices: HashMap.HashMap<Nat, Invoice> = HashMap.fromIter(Iter.fromArray(entries), entries.size(), Nat.equal, Hash.hash);
 
   var icpBlockHeight : Nat = 0;
   var icpLedgerMock : HashMap.HashMap<Blob, Nat> = HashMap.HashMap(16, Blob.equal, Blob.hash);
@@ -43,6 +51,9 @@ actor InvoiceMock {
 
 // #region Create Invoice
   public shared ({caller}) func create_invoice (args: T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
+    let id : Nat = invoiceCounter;
+    // increment counter
+    invoiceCounter += 1;
     let inputsValid = areInputsValid(args);
     if(not inputsValid) {
       return #err({
@@ -50,8 +61,6 @@ actor InvoiceMock {
         kind = #BadSize;
       });
     };
-
-    let id : Nat = invoices.size() + 1;
 
     if(id > MAX_INVOICES){
       return #err({
@@ -61,8 +70,8 @@ actor InvoiceMock {
     };
 
     let destinationResult : T.GetDestinationAccountIdentifierResult = getDestinationAccountIdentifier({ 
-      token=args.token;
-      invoiceId=id;
+      token = args.token;
+      invoiceId = id;
       caller 
     });
 
@@ -88,7 +97,7 @@ actor InvoiceMock {
           verifiedAtTime = null;
           paid = false;
           // 1 week in nanoseconds
-          expiration = Time.now() + (1000 * 60 * 60 * 24 * 7);
+          expiration = Time.now() + (1000 * 60 * 60 * 24 * 7 * 1_000_000);
           destination;
         };
     
@@ -171,10 +180,7 @@ actor InvoiceMock {
         return #ok({accountIdentifier = result});
       };
       case(_){
-        return #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+        return errInvalidToken;
       };
     };
   };
@@ -182,7 +188,7 @@ actor InvoiceMock {
 // #endregion
 
 // #region Get Invoice
-  public func get_invoice (args: T.GetInvoiceArgs) : async T.GetInvoiceResult {
+  public shared query ({caller}) func get_invoice (args: T.GetInvoiceArgs) : async T.GetInvoiceResult {
     let invoice = invoices.get(args.id);
     switch(invoice){
       case(null){
@@ -191,8 +197,36 @@ actor InvoiceMock {
           kind = #NotFound;
         });
       };
-      case(? i){
-        return #ok({invoice = i});
+      case (?i) {
+        if (i.creator == caller) {
+          return #ok({invoice = i});
+        };
+        // If additional permissions are provided
+        switch (i.permissions) {
+          case (null) {
+            return #err({
+              message = ?"You do not have permission to view this invoice";
+              kind = #NotAuthorized;
+            });
+          };
+          case (?permissions) {
+            let hasPermission = Array.find<Principal>(
+              permissions.canGet,
+              func (x : Principal) : Bool {
+                return x == caller;
+              }
+            );
+            if (Option.isSome(hasPermission)) {
+              return #ok({invoice = i});
+            } else {
+              return #err({
+                message = ?"You do not have permission to view this invoice";
+                kind = #NotAuthorized;
+              });
+            };
+          };
+        };
+        #ok({invoice = i});
       };
     };
   };
@@ -222,10 +256,7 @@ actor InvoiceMock {
         };
       };
       case(_){
-        return #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+        return errInvalidToken;
       };
     };
   };
@@ -249,6 +280,33 @@ actor InvoiceMock {
           return #ok(#AlreadyVerified{
             invoice = i;
           });
+        };
+
+        if (i.creator != caller) {
+          switch (i.permissions) {
+            case null {
+              return #err({
+                message = ?"You do not have permission to verify this invoice";
+                kind = #NotAuthorized;
+              });
+            };
+            case (?permissions) {
+              let hasPermission = Array.find<Principal>(
+                permissions.canVerify,
+                func (x : Principal) : Bool {
+                  return x == caller;
+                }
+              );
+              if (Option.isSome(hasPermission)) {
+                // May proceed
+              } else {
+                return #err({
+                  message = ?"You do not have permission to verify this invoice";
+                  kind = #NotAuthorized;
+                });
+              };
+            };
+          };
         };
 
         switch (i.token.symbol){
@@ -329,10 +387,7 @@ actor InvoiceMock {
             }
           };
           case(_){
-            return #err({
-              message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-              kind = #InvalidToken;
-            });
+            return errInvalidToken;
           };
         };
       };
@@ -434,10 +489,7 @@ actor InvoiceMock {
         return #ok({accountIdentifier = result});
       };
       case(_){
-        return #err({
-          message = ?"This token is not yet supported. Currently, this canister supports ICP.";
-          kind = #InvalidToken;
-        });
+        return errInvalidToken;
       };
     };
   };
@@ -554,11 +606,6 @@ actor InvoiceMock {
 // #region Upgrade Hooks
   system func preupgrade() {
       entries := Iter.toArray(invoices.entries());
-  };
-
-  system func postupgrade() {
-      invoices := HashMap.fromIter(Iter.fromArray(entries), 16, Nat.equal, Hash.hash);
-      entries := [];
   };
 // #endregion
 }

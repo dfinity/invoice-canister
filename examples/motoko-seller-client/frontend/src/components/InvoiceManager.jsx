@@ -11,12 +11,14 @@ function InvoiceManager(props) {
   if (status === null) return null;
 
   const generateInvoice = async () => {
-    const savedId = get("license-id");
+    // const savedId = get("license-id");
+    const savedId = null;
     if (savedId) {
       const result = await sellerActor.get_invoice(BigInt(Number(savedId)));
       setInvoice(result[0]);
     } else {
       const result = await sellerActor.create_invoice();
+      debugger;
       setInvoice(result.ok.invoice);
       set("invoice-id", result.ok.invoice.id.toString());
     }
