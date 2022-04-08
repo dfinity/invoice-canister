@@ -39,7 +39,6 @@ module {
     token : TokenVerbose;
     verifiedAtTime : ?Time.Time;
     paid : Bool;
-    expiration : Time.Time;
     destination : AccountIdentifier;
   };
 // #endregion

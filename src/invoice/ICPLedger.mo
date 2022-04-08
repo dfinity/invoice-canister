@@ -222,7 +222,6 @@ module {
                   verifiedAtTime;
                   // update paid
                   paid = true; // since transfer has succeeded
-                  expiration = i.expiration;
                   destination = i.destination;
                 };
 

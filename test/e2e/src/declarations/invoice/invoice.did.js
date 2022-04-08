@@ -51,7 +51,6 @@ export const idlFactory = ({ IDL }) => {
     'paid' : IDL.Bool,
     'verifiedAtTime' : IDL.Opt(Time),
     'amountPaid' : IDL.Nat,
-    'expiration' : Time,
     'details' : IDL.Opt(Details),
     'amount' : IDL.Nat,
   });
@@ -173,7 +172,6 @@ export const idlFactory = ({ IDL }) => {
       ),
     'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),
     'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], ['query']),
-    'remaining_cycles' : IDL.Func([], [IDL.Nat], ['query']),
     'transfer' : IDL.Func([TransferArgs], [TransferResult], []),
     'verify_invoice' : IDL.Func([VerifyInvoiceArgs], [VerifyInvoiceResult], []),
   });

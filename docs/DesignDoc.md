@@ -98,7 +98,6 @@ type Invoice =
    creator: principal;
    destination: AccountIdentifier;
    details: opt Details;
-   expiration: Time;
    id: nat;
    paid: bool;
    permissions: opt Permissions;
