@@ -42,7 +42,6 @@ type Invoice =
    creator: principal;
    destination: AccountIdentifier;
    details: opt Details;
-   expiration: int;
    id: nat;
    paid: bool;
    permissions: opt Permissions;

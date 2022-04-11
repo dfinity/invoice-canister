@@ -69,7 +69,6 @@ type Invoice =
    creator: principal;
    destination: AccountIdentifier;
    details: opt Details;
-   expiration: Time;
    id: nat;
    paid: bool;
    permissions: opt Permissions;
@@ -195,7 +194,6 @@ service : {
    (GetAccountIdentifierResult) query;
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
   get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult) query;
-  remaining_cycles: () -> (nat) query;
   transfer: (TransferArgs) -> (TransferResult);
   verify_invoice: (VerifyInvoiceArgs) -> (VerifyInvoiceResult);
 }

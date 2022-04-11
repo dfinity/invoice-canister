@@ -96,8 +96,6 @@ actor InvoiceMock {
           token;
           verifiedAtTime = null;
           paid = false;
-          // 1 week in nanoseconds
-          expiration = Time.now() + (1000 * 60 * 60 * 24 * 7 * 1_000_000);
           destination;
         };
     
@@ -353,7 +351,6 @@ actor InvoiceMock {
                       verifiedAtTime;
                       // update paid
                       paid = true;
-                      expiration = i.expiration;
                       destination = i.destination;
                     };
 

@@ -51,7 +51,6 @@ export const idlFactory = ({ IDL }) => {
     'paid' : IDL.Bool,
     'verifiedAtTime' : IDL.Opt(Time),
     'amountPaid' : IDL.Nat,
-    'expiration' : Time,
     'details' : IDL.Opt(Details),
     'amount' : IDL.Nat,
   });

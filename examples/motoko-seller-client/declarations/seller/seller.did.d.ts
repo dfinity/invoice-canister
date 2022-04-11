@@ -25,7 +25,6 @@ export interface Invoice {
   'paid' : boolean,
   'verifiedAtTime' : [] | [bigint],
   'amountPaid' : bigint,
-  'expiration' : bigint,
   'details' : [] | [Details],
   'amount' : bigint,
 }
