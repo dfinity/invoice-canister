@@ -5,6 +5,7 @@ import T          "./Types";
 import U          "./Utils";
 
 import Array      "mo:base/Array";
+import Debug      "mo:base/Debug";
 import Blob       "mo:base/Blob";
 import Hash       "mo:base/Hash";
 import HashMap    "mo:base/HashMap";
@@ -467,6 +468,9 @@ actor Invoice {
    * @returns {()}
    */
   public func authorize_creation (principal: Principal) : () {
+    if(Iter.size(Iter.fromArray(creation_allowlist)) >= MAX_ALLOWLIST){
+      Debug.trap("Creation allowlist is full");
+    };
     creation_allowlist := Array.append(
       creation_allowlist,
       [principal]
