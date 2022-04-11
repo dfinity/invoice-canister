@@ -1,4 +1,6 @@
+import { Secp256k1KeyIdentity } from "@dfinity/identity";
 import { Principal } from "@dfinity/principal";
+import { createActor } from "./utils/identity";
 const identityUtils = require("./utils/identity");
 const { defaultActor, defaultIdentity, balanceHolder } = identityUtils;
 
@@ -78,6 +80,25 @@ describe("Testing the creation of invoices", () => {
     } else {
       throw new Error(createResult.err.message);
     }
+  });
+  it("should reject if the creator is not in the allowlist", async () => {
+    const notAuthorizedActor = createActor(Secp256k1KeyIdentity.generate());
+    const createResult = await notAuthorizedActor.create_invoice(testInvoice);
+    console.log(createResult);
+    expect(createResult.err).toStrictEqual({
+      kind: { NotAuthorized: null },
+      message: [
+        "You do not have permission to create an invoice. Call `authorize_creation` method to add yourself to the allowlist.",
+      ],
+    });
+  });
+  it("should reject if the creator is added to the allowlist", async () => {
+    const freshIdentity = Secp256k1KeyIdentity.generate();
+    const notAuthorizedActor = createActor(freshIdentity);
+    await defaultActor.authorize_creation(freshIdentity.getPrincipal());
+    const createResult = await notAuthorizedActor.create_invoice(testInvoice);
+    console.log(createResult);
+    expect(createResult.ok).toBeTruthy();
   });
   it("should return an error if the description is too large", async () => {
     const createResult = await defaultActor.create_invoice(excessiveMeta);

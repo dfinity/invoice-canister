@@ -41,6 +41,8 @@ actor Invoice {
   let invoices : HashMap.HashMap<Nat, Invoice> = HashMap.fromIter(Iter.fromArray(entries), entries.size(), Nat.equal, Hash.hash);
   entries := [];
   let MAX_INVOICES = 30_000;
+  stable var creation_allowlist : [Principal] = [];
+  let MAX_ALLOWLIST = 256;
 // #endregion
 
 /**
@@ -49,6 +51,21 @@ actor Invoice {
 
 // #region Create Invoice
   public shared ({caller}) func create_invoice (args : T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
+    let hasPermission = Option.isSome(
+      Array.find<Principal>(
+        creation_allowlist,
+        func (x : Principal) : Bool {
+          return x == caller;
+        }
+      )
+    );
+    if(not hasPermission){
+      return #err({
+        message = ?"You do not have permission to create an invoice. Call `authorize_creation` method to add yourself to the allowlist.";
+        kind = #NotAuthorized;
+      });
+    };
+
     let id : Nat = invoiceCounter;
     // increment counter
     invoiceCounter += 1;
@@ -441,6 +458,19 @@ actor Invoice {
       accountIdentifier;
       canisterId = ?Principal.fromActor(Invoice);
     });
+  };
+  
+  /**
+   * Adds a principal to the list of principals that can create an invoice.
+   *
+   * @param {Principal} principal
+   * @returns {()}
+   */
+  public func authorize_creation (principal: Principal) : () {
+    creation_allowlist := Array.append(
+      creation_allowlist,
+      [principal]
+    );
   };
 // #endregion
 

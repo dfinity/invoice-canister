@@ -68,6 +68,7 @@ module {
       #InvalidDestination;
       #InvalidDetails;
       #MaxInvoicesReached;
+      #NotAuthorized;
       #Other;
     };
   };

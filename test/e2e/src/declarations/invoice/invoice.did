@@ -150,6 +150,7 @@ type CreateInvoiceErr =
       InvalidDetails;
       InvalidToken;
       MaxInvoicesReached;
+      NotAuthorized;
       Other;
     };
    message: opt text;
@@ -190,12 +191,12 @@ type AccountIdentifier =
 service : {
   accountIdentifierToBlob: (AccountIdentifier__1) ->
    (AccountIdentifierToBlobResult);
+  authorize_creation: (principal) -> () oneway;
   create_invoice: (CreateInvoiceArgs) -> (CreateInvoiceResult);
   get_account_identifier: (GetAccountIdentifierArgs) ->
    (GetAccountIdentifierResult) query;
   get_balance: (GetBalanceArgs) -> (GetBalanceResult);
   get_invoice: (GetInvoiceArgs) -> (GetInvoiceResult) query;
-  remaining_cycles: () -> (nat) query;
   transfer: (TransferArgs) -> (TransferResult);
   verify_invoice: (VerifyInvoiceArgs) -> (VerifyInvoiceResult);
 }

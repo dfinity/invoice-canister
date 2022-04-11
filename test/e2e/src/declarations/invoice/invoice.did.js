@@ -63,6 +63,7 @@ export const idlFactory = ({ IDL }) => {
       'InvalidDestination' : IDL.Null,
       'MaxInvoicesReached' : IDL.Null,
       'BadSize' : IDL.Null,
+      'NotAuthorized' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'Other' : IDL.Null,
     }),
@@ -165,6 +166,7 @@ export const idlFactory = ({ IDL }) => {
         [AccountIdentifierToBlobResult],
         [],
       ),
+    'authorize_creation' : IDL.Func([IDL.Principal], [], ['oneway']),
     'create_invoice' : IDL.Func([CreateInvoiceArgs], [CreateInvoiceResult], []),
     'get_account_identifier' : IDL.Func(
         [GetAccountIdentifierArgs],
@@ -173,7 +175,6 @@ export const idlFactory = ({ IDL }) => {
       ),
     'get_balance' : IDL.Func([GetBalanceArgs], [GetBalanceResult], []),
     'get_invoice' : IDL.Func([GetInvoiceArgs], [GetInvoiceResult], ['query']),
-    'remaining_cycles' : IDL.Func([], [IDL.Nat], ['query']),
     'transfer' : IDL.Func([TransferArgs], [TransferResult], []),
     'verify_invoice' : IDL.Func([VerifyInvoiceArgs], [VerifyInvoiceResult], []),
   });
