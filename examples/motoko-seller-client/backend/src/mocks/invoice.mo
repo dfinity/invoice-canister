@@ -43,7 +43,7 @@ actor InvoiceMock {
   var icpBlockHeight : Nat = 0;
   var icpLedgerMock : HashMap.HashMap<Blob, Nat> = HashMap.HashMap(16, Blob.equal, Blob.hash);
   let MAX_INVOICES = 30_000;
-  stable var creation_allowlist : [Principal] = [];
+  stable var creationAllowList : [Principal] = [];
   let MAX_ALLOWLIST = 256;
 // #endregion
 
@@ -512,11 +512,11 @@ actor InvoiceMock {
    * @returns {()}
    */
   public func authorize_creation (principal: Principal) : () {
-    if(Iter.size(Iter.fromArray(creation_allowlist)) >= MAX_ALLOWLIST){
+    if(Iter.size(Iter.fromArray(creationAllowList)) >= MAX_ALLOWLIST){
       Debug.trap("Creation allowlist is full");
     };
-    creation_allowlist := Array.append(
-      creation_allowlist,
+    creationAllowList := Array.append(
+      creationAllowList,
       [principal]
     );
   };

@@ -42,7 +42,7 @@ actor Invoice {
   let invoices : HashMap.HashMap<Nat, Invoice> = HashMap.fromIter(Iter.fromArray(entries), entries.size(), Nat.equal, Hash.hash);
   entries := [];
   let MAX_INVOICES = 30_000;
-  stable var creation_allowlist : [Principal] = [];
+  stable var creationAllowList : [Principal] = [];
   let MAX_ALLOWLIST = 256;
 // #endregion
 
@@ -54,7 +54,7 @@ actor Invoice {
   public shared ({caller}) func create_invoice (args : T.CreateInvoiceArgs) : async T.CreateInvoiceResult {
     let hasPermission = Option.isSome(
       Array.find<Principal>(
-        creation_allowlist,
+        creationAllowList,
         func (x : Principal) : Bool {
           return x == caller;
         }
@@ -468,11 +468,11 @@ actor Invoice {
    * @returns {()}
    */
   public func authorize_creation (principal: Principal) : () {
-    if(Iter.size(Iter.fromArray(creation_allowlist)) >= MAX_ALLOWLIST){
+    if(Iter.size(Iter.fromArray(creationAllowList)) >= MAX_ALLOWLIST){
       Debug.trap("Creation allowlist is full");
     };
-    creation_allowlist := Array.append(
-      creation_allowlist,
+    creationAllowList := Array.append(
+      creationAllowList,
       [principal]
     );
   };
