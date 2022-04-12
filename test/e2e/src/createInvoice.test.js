@@ -92,7 +92,7 @@ describe("Testing the creation of invoices", () => {
       ],
     });
   });
-  it("should reject if the creator is added to the allowlist", async () => {
+  it("should succeed if the creator is added to the allowlist", async () => {
     const freshIdentity = Secp256k1KeyIdentity.generate();
     const notAuthorizedActor = createActor(freshIdentity);
     await defaultActor.authorize_creation(freshIdentity.getPrincipal());
