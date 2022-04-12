@@ -20,4 +20,4 @@ Given these constraints, we can estimate that the canister can safely hold 30,00
 ## Safe deployments
 The canister allows invoice creation with an allowlist. Since the canister is holding ICP custodially, you should only allow your own accounts to create invoices, for maximum safety to your users. After the canister is uploaded, call the `authorize_creation` method with the principals of your canisters or admin accounts to add them to the allowlist. 
 
-We recommend you publish your fork or clone of this project on GitHub and use the https://docs.covercode.ooo/ guide provide reproducibible builds for any and all financial applications. If it is possible, consider removing all controllers except for the [blackhole canister](https://github.com/ninegua/ic-blackhole).
+We recommend you publish your fork or clone of this project on GitHub and use the https://docs.covercode.ooo/ guide provide reproducible builds for any and all financial applications. If it is possible, consider removing all controllers except for the [blackhole canister](https://github.com/ninegua/ic-blackhole).
