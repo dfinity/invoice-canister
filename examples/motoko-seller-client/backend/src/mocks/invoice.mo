@@ -511,14 +511,34 @@ actor InvoiceMock {
    * @param {Principal} principal
    * @returns {()}
    */
-  public func authorize_creation (principal: Principal) : () {
+  public func authorize_creation (principal: Principal) : async T.AuthorizeCreationResult {
+    if(
+      Option.isSome(
+        Array.find<Principal>(
+          creationAllowList,
+          func (x : Principal) : Bool {
+            return x == principal;
+          }
+        )
+      )
+    ) {
+      return #err({
+        message = ?"You are already authorized to create invoices";
+        kind = #AlreadyAuthorized;
+      });
+    };
     if(Iter.size(Iter.fromArray(creationAllowList)) >= MAX_ALLOWLIST){
-      Debug.trap("Creation allowlist is full");
+      return #err({
+        message = ?"Creation allow list is full";
+        kind = #LimitExceeded;
+      });
     };
     creationAllowList := Array.append(
       creationAllowList,
       [principal]
     );
+    // return empty tuple if successful
+    return #ok(());
   };
   
   func mockICPTransfer (args: T.ICPTransferArgs) : async T.ICPTransferResult {

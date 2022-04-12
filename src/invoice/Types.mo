@@ -232,6 +232,18 @@ module {
   };
 // #endregion
 
+// #region authorizeCreationResult
+  public type AuthorizeCreationResult = Result.Result<(), AuthorizeCreationErr>;
+  public type AuthorizeCreationErr = {
+    message : ?Text;
+    kind : {
+      #AlreadyAuthorized;
+      #LimitExceeded;
+      #Other;
+    };
+  };
+// #endregion
+
 // #region ICP Transfer
   public type Memo = Nat64;
   public type SubAccount = Blob;
