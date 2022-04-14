@@ -142,7 +142,7 @@ module {
       invoice : Invoice;
     };
   };
-  type VerifyInvoiceErr = {
+  public type VerifyInvoiceErr = {
     message : ?Text;
     kind : {
       #InvalidInvoiceId;
