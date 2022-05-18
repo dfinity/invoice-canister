@@ -36,6 +36,7 @@ const defaultActor = createActor(canisterId, {
   },
 });
 
+
 // Account that will receive a large balance of ICP for testing from install.sh
 const balanceHolderIdentity = parseIdentity(
   "test-ec-secp256k1-priv-key-balanceholder.pem"
@@ -48,9 +49,21 @@ const balanceHolder = createActor(canisterId, {
   },
 });
 
+// Authorize creation of assets for defaultActor
+defaultActor.authorize_creation(defaultIdentity.getPrincipal());
+
 module.exports = {
   defaultActor,
   defaultIdentity,
   balanceHolder,
   balanceHolderIdentity,
+  createActor: (identity) => {
+    return createActor(canisterId, {
+      agentOptions: {
+        identity,
+        fetch,
+        host: "http://localhost:8000",
+      },
+    });
+  },
 };

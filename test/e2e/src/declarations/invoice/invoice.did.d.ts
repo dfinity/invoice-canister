@@ -27,6 +27,7 @@ export interface CreateInvoiceErr {
     { 'InvalidDestination' : null } |
     { 'MaxInvoicesReached' : null } |
     { 'BadSize' : null } |
+    { 'NotAuthorized' : null } |
     { 'InvalidToken' : null } |
     { 'Other' : null },
   'message' : [] | [string],
@@ -132,6 +133,7 @@ export interface _SERVICE {
   'accountIdentifierToBlob' : (arg_0: AccountIdentifier__1) => Promise<
       AccountIdentifierToBlobResult
     >,
+  'authorize_creation' : (arg_0: Principal) => Promise<undefined>,
   'create_invoice' : (arg_0: CreateInvoiceArgs) => Promise<CreateInvoiceResult>,
   'get_account_identifier' : (arg_0: GetAccountIdentifierArgs) => Promise<
       GetAccountIdentifierResult
