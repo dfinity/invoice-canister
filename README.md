@@ -2,8 +2,8 @@
 
 This project provides a simple interface for creating and paying invoices in various tokens on the Internet Computer. It is a custodial solution, intended to be a simple, drop-in payments solution for any canister. To read more about the design of the canister, see the [Design Doc](./docs/DesignDoc.md).
 
-## IMPORTANT / DISCLAIMER: Work in Progress
-This project is currently work in progress and it is not recommended to use it productively at this point.  
+## IMPORTANT / DISCLAIMER
+This project is to be used for educational purposes only. It has [known security vulnerabilities](https://github.com/dfinity/invoice-canister/issues). As such, it should not be used in any real-world / production context where money is at stake. Please proceed with thoughtfulness and attention.
 
 ## Integrating with the Invoice Canister
 
