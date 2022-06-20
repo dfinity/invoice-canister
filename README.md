@@ -4,7 +4,51 @@ This project provides a simple interface for creating and paying invoices in var
 
 ## Integrating with the Invoice Canister
 
-Include this code in your `dfx.json` and follow our `self-hosted` example: TODO
+To simply add the Invoice Canister to your project, copy the source code from the `src/invoice` directory to your project. For the sake of this example, we'll say the directory you place them in is also `src/invoice`. Do the same with `src/ledger`.
+
+Then, add the following to your `dfx.json`:
+
+```json
+"canisters": [
+    // ...
+    "ledger": {
+        "type": "custom",
+        "candid": "src/ledger/ledger.did",
+        "wasm": "src/ledger/ledger.wasm",
+        "remote": {
+            "candid": "src/ledger/ledger.did",
+            "id": {
+                "ic": "ryjl3-tyaaa-aaaaa-aaaba-cai"
+            }
+        }
+    },
+    "invoice": {
+        "dependencies": [
+            "ledger"
+        ],
+        "main": "src/invoice/main.mo",
+        "type": "motoko"
+    },
+]
+```
+
+If you have a canister that will make calls to the invoice canister, you can now add it as a dependency and make calls to it from your own canister. The typical payment workflow will be as follows:
+
+- create an invoice (`create_invoice`)
+- make a payment to the invoice destination
+- verify invoice (`verify_invoice`)
+
+At this stage, the funds will be consolidated in the invoice creator's account. You can verify those funds in via
+
+`get_balance` -> returns the balance in e8's
+
+and you can transfer those funds to another account via `transfer`.
+
+Once an invoice has been verified, you can look it up again anytime to check the status and the amount paid.
+
+### Advanced use cases
+
+For security, the canister will only allow the invoice creator to read the status of an invoice or to verify it. If your flow requires a different principal, of say the customer, to make those requests, you can specify that in the `Permissions` configuration at the time the invoice is created.
 
 ## Getting Started - Development
 
