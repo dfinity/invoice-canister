@@ -2,6 +2,9 @@
 
 This project provides a simple interface for creating and paying invoices in various tokens on the Internet Computer. It is a custodial solution, intended to be a simple, drop-in payments solution for any canister. To read more about the design of the canister, see the [Design Doc](./docs/DesignDoc.md).
 
+## IMPORTANT / DISCLAIMER: Work in Progress
+This project is currently work in progress and it is not recommended to use it productively at this point.  
+
 ## Integrating with the Invoice Canister
 
 To simply add the Invoice Canister to your project, copy the source code from the `src/invoice` directory to your project. For the sake of this example, we'll say the directory you place them in is also `src/invoice`. Do the same with `src/ledger`.
