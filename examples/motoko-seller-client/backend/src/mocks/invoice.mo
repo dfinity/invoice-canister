@@ -43,6 +43,8 @@ actor InvoiceMock {
   var icpBlockHeight : Nat = 0;
   var icpLedgerMock : HashMap.HashMap<Blob, Nat> = HashMap.HashMap(16, Blob.equal, Blob.hash);
   let MAX_INVOICES = 30_000;
+  stable var creationAllowList : [Principal] = [];
+  let MAX_ALLOWLIST = 256;
 // #endregion
 
 /**
@@ -498,6 +500,42 @@ actor InvoiceMock {
       accountIdentifier;
       canisterId = ?Principal.fromActor(InvoiceMock);
     });
+  };
+
+   /**
+   * Adds a principal to the list of principals that can create an invoice.
+   *
+   * @param {Principal} principal
+   * @returns {()}
+   */
+  public func authorize_creation (principal: Principal) : async T.AuthorizeCreationResult {
+    if(
+      Option.isSome(
+        Array.find<Principal>(
+          creationAllowList,
+          func (x : Principal) : Bool {
+            return x == principal;
+          }
+        )
+      )
+    ) {
+      return #err({
+        message = ?"You are already authorized to create invoices";
+        kind = #AlreadyAuthorized;
+      });
+    };
+    if(Iter.size(Iter.fromArray(creationAllowList)) >= MAX_ALLOWLIST){
+      return #err({
+        message = ?"Creation allow list is full";
+        kind = #LimitExceeded;
+      });
+    };
+    creationAllowList := Array.append(
+      creationAllowList,
+      [principal]
+    );
+    // return empty tuple if successful
+    return #ok(());
   };
   
   func mockICPTransfer (args: T.ICPTransferArgs) : async T.ICPTransferResult {

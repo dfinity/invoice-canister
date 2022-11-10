@@ -62,6 +62,7 @@ export const idlFactory = ({ IDL }) => {
       'InvalidDestination' : IDL.Null,
       'MaxInvoicesReached' : IDL.Null,
       'BadSize' : IDL.Null,
+      'NotAuthorized' : IDL.Null,
       'InvalidToken' : IDL.Null,
       'Other' : IDL.Null,
     }),
@@ -176,6 +177,7 @@ export const idlFactory = ({ IDL }) => {
         [AccountIdentifierToBlobResult],
         [],
       ),
+    'authorize_creation' : IDL.Func([IDL.Principal], [], ['oneway']),
     'create_invoice' : IDL.Func([CreateInvoiceArgs], [CreateInvoiceResult], []),
     'deposit_free_money' : IDL.Func([FreeMoneyArgs], [FreeMoneyResult], []),
     'get_account_identifier' : IDL.Func(

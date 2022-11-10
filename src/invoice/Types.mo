@@ -67,6 +67,7 @@ module {
       #InvalidDestination;
       #InvalidDetails;
       #MaxInvoicesReached;
+      #NotAuthorized;
       #Other;
     };
   };
@@ -225,6 +226,18 @@ module {
     message : ?Text;
     kind : {
       #InvalidAccountIdentifier;
+      #Other;
+    };
+  };
+// #endregion
+
+// #region authorizeCreationResult
+  public type AuthorizeCreationResult = Result.Result<(), AuthorizeCreationErr>;
+  public type AuthorizeCreationErr = {
+    message : ?Text;
+    kind : {
+      #AlreadyAuthorized;
+      #LimitExceeded;
       #Other;
     };
   };
