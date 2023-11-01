@@ -30,7 +30,10 @@ jobs:
 
       - run: npm install -g npm
 
-      - run: echo y | DFX_VERSION=0.8.5 sh -ci "$(curl -fsSL https://sdk.dfinity.org/install.sh)"
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: "0.8.5"
 
       - name: Install vessel
         run: |
